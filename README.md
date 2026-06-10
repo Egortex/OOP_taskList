@@ -88,5 +88,6 @@ main.ts          # точка входа клиента
 - ~~Preload критичных маршрутов, skeleton-состояния, stale-while-revalidate~~ — готово (см. [ARCHITECTURE.md](./ARCHITECTURE.md#22-роутер--approuter))
 - ~~Параллельная загрузка layout/page-модулей и отмена устаревших запросов через AbortSignal~~ — готово (см. [ARCHITECTURE.md](./ARCHITECTURE.md#22-роутер--approuter))
 - ~~Вложенные маршруты / master-detail для `/users` → `/users/:id`~~ — готово (см. [ARCHITECTURE.md](./ARCHITECTURE.md#23-layouts--applayouts))
+- ~~View Transitions, прогресс-бар вместо затемнения, debounce для prefetch~~ — готово (см. [ARCHITECTURE.md](./ARCHITECTURE.md#22-роутер--approuter))
 - Добавить поиск
 - Добавить фильтрацию

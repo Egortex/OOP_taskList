@@ -22,6 +22,9 @@ interface MountedLayout {
 
 export type StatusListener = (status: NavigationStatus) => void;
 
+/** Задержка перед prefetch по наведению — отменяется, если курсор уходит со ссылки раньше. */
+const PREFETCH_HOVER_DELAY_MS = 120;
+
 /**
  * Клиентский SPA-роутер: перехват ссылок, History API, матчинг маршрутов,
  * lazy-loading страниц, loaders, guards, кэш, prefetch и scroll restoration.
@@ -34,6 +37,7 @@ export class Router {
 	private navId = 0;
 	private layoutChain: MountedLayout[] = [];
 	private abortController: AbortController | null = null;
+	private prefetchTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(
 		private routes: RouteDefinition[],
@@ -49,6 +53,7 @@ export class Router {
 		});
 		document.addEventListener("click", this.onClick);
 		document.addEventListener("mouseover", this.onMouseOver);
+		document.addEventListener("mouseout", this.onMouseOut);
 		void this.render();
 		this.preloadCriticalRoutes();
 	}
@@ -106,7 +111,10 @@ export class Router {
 		this.navigate(url.pathname + url.search);
 	};
 
-	/** При наведении на внутреннюю ссылку запускает предзагрузку данных целевой страницы. */
+	/**
+	 * При наведении на внутреннюю ссылку откладывает prefetch на `PREFETCH_HOVER_DELAY_MS` —
+	 * это отсеивает "пролётные" наведения (например, при быстром скролле мышью по списку ссылок).
+	 */
 	private onMouseOver = (event: MouseEvent): void => {
 		const target = event.target;
 		if (!(target instanceof Element)) return;
@@ -117,7 +125,20 @@ export class Router {
 		const url = new URL(link.href, location.href);
 		if (url.origin !== location.origin) return;
 
-		void this.prefetch(url.pathname + url.search);
+		if (this.prefetchTimer) clearTimeout(this.prefetchTimer);
+		const path = url.pathname + url.search;
+		this.prefetchTimer = setTimeout(() => {
+			this.prefetchTimer = null;
+			void this.prefetch(path);
+		}, PREFETCH_HOVER_DELAY_MS);
+	};
+
+	/** Отменяет отложенный prefetch, если курсор ушёл со ссылки до истечения задержки. */
+	private onMouseOut = (): void => {
+		if (this.prefetchTimer) {
+			clearTimeout(this.prefetchTimer);
+			this.prefetchTimer = null;
+		}
 	};
 
 	/** Предзагрузка данных страницы по наведению на ссылку (Next.js-style). */
@@ -160,6 +181,20 @@ export class Router {
 	private toLayoutChain(layout: LayoutLoader | LayoutLoader[] | undefined): LayoutLoader[] {
 		if (!layout) return [];
 		return Array.isArray(layout) ? layout : [layout];
+	}
+
+	/**
+	 * Выполняет обновление DOM через View Transitions API (`document.startViewTransition`),
+	 * если браузер её поддерживает и пользователь не запросил отключение анимаций
+	 * (`prefers-reduced-motion: reduce`). Иначе — просто выполняет `update()` напрямую.
+	 */
+	private runTransition(update: () => void): void {
+		const doc = document as Document & { startViewTransition?: (callback: () => void) => unknown };
+		if (!doc.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+			update();
+			return;
+		}
+		doc.startViewTransition(update);
 	}
 
 	/** Оповещает всех подписчиков о смене статуса навигации. */
@@ -225,36 +260,49 @@ export class Router {
 			const pageContainer = await this.mountLayout(layoutChain, common, ctx, layoutModulePromises);
 			if (navId !== this.navId) return; // перекрыто более новой навигацией
 
-			this.cleanupCurrentPage?.();
-			pageContainer.innerHTML = "";
-
 			let data: unknown;
 			let usedSkeleton = false;
+
+			// Мгновенная часть: очистка предыдущей страницы и либо рендер из кэша,
+			// либо skeleton, либо рендер страниц без loader'а — оборачивается в View
+			// Transition для плавной смены содержимого между страницами.
+			this.runTransition(() => {
+				this.cleanupCurrentPage?.();
+				pageContainer.innerHTML = "";
+
+				if (page.loader && cached !== undefined) {
+					data = cached.data;
+					const cleanup = page.render(pageContainer, data, ctx);
+					this.cleanupCurrentPage = typeof cleanup === "function" ? cleanup : null;
+				} else if (page.loader && page.skeleton) {
+					page.skeleton(pageContainer);
+					document.body.classList.add("has-skeleton");
+					usedSkeleton = true;
+				} else if (!page.loader) {
+					const cleanup = page.render(pageContainer, data, ctx);
+					this.cleanupCurrentPage = typeof cleanup === "function" ? cleanup : null;
+				}
+			});
+
 			if (page.loader) {
 				if (cached !== undefined) {
-					data = cached.data;
 					if (cached.stale) {
 						void this.revalidate(page, ctx, path, navId);
 					}
 				} else {
-					if (page.skeleton) {
-						page.skeleton(pageContainer);
-						document.body.classList.add("has-skeleton");
-						usedSkeleton = true;
-					}
 					data = await page.loader(ctx);
 					if (navId !== this.navId) return; // перекрыто более новой навигацией
 					this.cache.set(path, data);
+
+					if (usedSkeleton) {
+						document.body.classList.remove("has-skeleton");
+						pageContainer.innerHTML = "";
+					}
+
+					const cleanup = page.render(pageContainer, data, ctx);
+					this.cleanupCurrentPage = typeof cleanup === "function" ? cleanup : null;
 				}
 			}
-
-			if (usedSkeleton) {
-				document.body.classList.remove("has-skeleton");
-				pageContainer.innerHTML = "";
-			}
-
-			const cleanup = page.render(pageContainer, data, ctx);
-			this.cleanupCurrentPage = typeof cleanup === "function" ? cleanup : null;
 
 			this.restoreScroll(path, options.isPopState ?? false);
 			this.setStatus("success");
