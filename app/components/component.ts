@@ -1,21 +1,49 @@
-export class Component {
-	/**
-	 * @param {String} placeholderId -Идентификатор элемента, в который нужно раздуть компонент
-	 * @param {Object} props - Свойства компонента, включая события и данные
-	 * @param {String} template - HTML-шаблон для заполнения идентификатора заполнителя
-	 */
-	constructor(placeholderId, { events = {}, data = {} } = {}, template) {
-		this.componentElem = document.getElementById(placeholderId);
-		if (!this.componentElem) throw new Error(`Element with ID '${placeholderId}' not found.`);
+export type ComponentEventHandler = (event: Event) => void;
+
+export interface ComponentEvents {
+	[eventName: string]: ComponentEventHandler;
+}
+
+export interface ComponentProps<TData = unknown> {
+	events?: ComponentEvents;
+	data?: TData;
+}
+
+export interface TriggerEventOptions {
+	bubbles?: boolean;
+	cancelable?: boolean;
+}
+
+/**
+ * @param placeholderId - Идентификатор элемента, в который нужно раздуть компонент
+ * @param props - Свойства компонента, включая события и данные
+ * @param template - HTML-шаблон для заполнения идентификатора заполнителя
+ */
+export class Component<TRefs extends Record<string, HTMLElement> = Record<string, HTMLElement>> {
+	protected componentElem: HTMLElement;
+	protected refs: TRefs = {} as TRefs;
+
+	constructor(
+		placeholderId: string,
+		{ events = {} }: ComponentProps<unknown> = {},
+		template?: string,
+	) {
+		const componentElem = document.getElementById(placeholderId);
+		if (!componentElem) throw new Error(`Element with ID '${placeholderId}' not found.`);
+		this.componentElem = componentElem;
 
 		if (template) {
 			const templateFragment = document.createRange().createContextualFragment(template);
 			this.componentElem.appendChild(templateFragment);
 
-			this.refs = Array.from(this.componentElem.querySelectorAll("[ref]")).reduce((acc, elem) => {
-				acc[elem.getAttribute("ref")] = elem;
-				return acc;
-			}, {});
+			this.refs = Array.from(this.componentElem.querySelectorAll<HTMLElement>("[ref]")).reduce(
+				(acc, elem) => {
+					const refName = elem.getAttribute("ref");
+					if (refName) acc[refName] = elem;
+					return acc;
+				},
+				{} as Record<string, HTMLElement>,
+			) as TRefs;
 		}
 
 		Object.entries(events).forEach(([eventName, handler]) =>
@@ -26,7 +54,11 @@ export class Component {
 	/**
 	 * Запуск события компонента с предоставленной «подробной» полезной нагрузкой и параметрами.
 	 */
-	triggerEvent(eventName, detail, options = { bubbles: false, cancelable: false }) {
+	triggerEvent(
+		eventName: string,
+		detail?: unknown,
+		options: TriggerEventOptions = { bubbles: false, cancelable: false },
+	): void {
 		const event = new CustomEvent(eventName, { detail, ...options });
 		this.componentElem.dispatchEvent(event);
 	}

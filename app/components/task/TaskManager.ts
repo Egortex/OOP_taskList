@@ -1,33 +1,46 @@
-import { Component } from "../component";
+import { Component, ComponentProps } from "../component";
 import "./task.scss";
 import templateHTML from "./task.html?raw";
-import { Task } from "./Task";
+import { Task, TaskPriority } from "./Task";
+import { ApiService } from "../../services/ApiService";
 
-export class TaskManager extends Component {
-	constructor(placeholderId, props) {
+export interface TaskManagerRefs extends Record<string, HTMLElement> {
+	newTask: HTMLButtonElement;
+	newTaskInput: HTMLInputElement;
+	taskPriority: HTMLSelectElement;
+	tasksList: HTMLUListElement;
+}
+
+export interface TaskManagerData {
+	api: ApiService;
+	dataTest?: string;
+}
+
+export class TaskManager extends Component<TaskManagerRefs> {
+	private tasks: Task[];
+	private api: ApiService;
+
+	constructor(placeholderId: string, props: ComponentProps<TaskManagerData>) {
 		super(placeholderId, props, templateHTML);
-		this.tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+		this.tasks = JSON.parse(localStorage.getItem("tasks") ?? "[]") as Task[];
+		if (!props.data) throw new Error("TaskManager requires 'data.api' to be provided.");
 		this.api = props.data.api;
-		// this.testing = props.data.dataTest;
-		// this.getInform();
 		this.init();
 	}
 
-	init() {
-		this.refs.newTask.addEventListener("click", (e) => this.addTask());
+	private init(): void {
+		this.refs.newTask.addEventListener("click", () => this.addTask());
 		this.displayTasks();
 	}
 
-	async getInform() {
+	async getInform(): Promise<void> {
 		try {
 			this.triggerEvent("onLoader");
-			this.user = await this.api.getUsers();
-			this.tasks = [...new Set([...this.tasks, ...this.user])];
+			const users = await this.api.getUsers();
+			const fetchedTasks = users.map((user) => new Task(user.id, user.name));
+			this.tasks = [...this.tasks, ...fetchedTasks];
 			this.updateLocalStorage();
-			this.displayTasks(); // Обновляем отображение задач
-			this.triggerEvent("offLoader");
-
-			console.log("🚀 ~ TaskManager ~ constructor ~ this.user:", this.user);
+			this.displayTasks();
 		} catch (error) {
 			console.error("Failed to load user data:", error);
 		} finally {
@@ -35,19 +48,17 @@ export class TaskManager extends Component {
 		}
 	}
 
-	searchTasks(searchTerm) {
+	searchTasks(searchTerm: string): Task[] {
 		const lowerCaseTerm = searchTerm.toLowerCase();
-		// console.log("🚀 ~ TaskManager ~ searchTasks ~ lowerCaseTerm:", lowerCaseTerm);
-		console.log("🚀 ~ TaskManager ~ searchTasks ~ this.tasks:", this.tasks);
 		return this.tasks.filter((task) => task.title.toLowerCase().includes(lowerCaseTerm));
 	}
 
-	displayTasks() {
+	displayTasks(): void {
 		const tasksList = this.refs.tasksList;
 		tasksList.innerHTML = ""; // Очистить текущий список
 		this.tasks.forEach((task) => {
 			const taskElement = document.createElement("li");
-			taskElement.textContent = task.isCompleted + " " + task.title + " " + task.priority;
+			taskElement.textContent = `${task.isCompleted} ${task.title} ${task.priority}`;
 			taskElement.onclick = () => this.toggleCompleted(task.id);
 			tasksList.appendChild(taskElement);
 
@@ -61,22 +72,12 @@ export class TaskManager extends Component {
 		});
 	}
 
-	toggleCompleted(id) {
-		const task = this.tasks.find((task) => task.id === id);
-		if (task) {
-			task.isCompleted = !task.isCompleted;
-			this.updateLocalStorage();
-			this.displayTasks();
-		}
-	}
-
-	addTask() {
+	addTask(): void {
 		const title = this.refs.newTaskInput.value.trim();
-		const taskPriority = this.refs.taskPriority.value;
-		console.log("🚀 ~ TaskManager ~ addTask ~ this.refs.taskPriority:", this.refs.taskPriority);
+		const taskPriority = this.refs.taskPriority.value as TaskPriority;
 		if (!title) {
 			// валидация
-			return 0;
+			return;
 		}
 
 		const id = Date.now();
@@ -88,16 +89,19 @@ export class TaskManager extends Component {
 		this.triggerEvent("toast");
 	}
 
-	updateLocalStorage() {
+	private updateLocalStorage(): void {
 		localStorage.setItem("tasks", JSON.stringify(this.tasks));
-		console.log("🚀 ~ TaskManager ~ updateLocalStorage ~ this.tasks:", this.tasks);
 	}
 
-	getTasks() {
+	getTasks(): Task[] {
 		return this.tasks;
 	}
 
-	toggleCompleted(id) {
+	getTasksListElement(): HTMLUListElement {
+		return this.refs.tasksList;
+	}
+
+	toggleCompleted(id: number): void {
 		const task = this.tasks.find((task) => task.id === id);
 		if (task) {
 			task.isCompleted = !task.isCompleted;
@@ -106,7 +110,7 @@ export class TaskManager extends Component {
 		}
 	}
 
-	deleteTask(id) {
+	deleteTask(id: number): void {
 		this.tasks = this.tasks.filter((task) => task.id !== id);
 		this.updateLocalStorage();
 		this.displayTasks();

@@ -2,12 +2,14 @@ import "./toaster.html?raw";
 import "./toaster.scss";
 
 export class Toaster {
+	private toasterContainer: HTMLDivElement;
+
 	constructor() {
 		this.toasterContainer = this.createToasterContainer();
 	}
 
-	createToasterContainer() {
-		let container = document.createElement("div");
+	private createToasterContainer(): HTMLDivElement {
+		const container = document.createElement("div");
 		container.setAttribute("id", "toasterContainer");
 		container.style.position = "fixed";
 		container.style.bottom = "20px";
@@ -17,7 +19,7 @@ export class Toaster {
 		return container;
 	}
 
-	showToast(message, duration = 3000) {
+	showToast(message: string, duration = 3000): void {
 		const toast = document.createElement("div");
 		toast.textContent = message;
 		toast.style.background = "rgba(0,0,0,0.7)";
