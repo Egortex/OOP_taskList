@@ -28,6 +28,25 @@ export interface PageModule<TData = unknown> {
 	render(container: HTMLElement, data: TData, ctx: RouteContext): RenderResult;
 }
 
+/** Результат монтирования layout'а: контейнер для страницы и опциональные хуки обновления/очистки. */
+export interface LayoutRenderResult {
+	/** Элемент, в который роутер будет рендерить текущую страницу. */
+	outlet: HTMLElement;
+	/** Вызывается при каждой навигации, если layout не пересоздаётся (например, для подсветки активной ссылки). */
+	update?(ctx: RouteContext): void;
+	/** Вызывается перед размонтированием layout'а (при переходе на маршрут с другим layout'ом). */
+	cleanup?(): void;
+}
+
+/** Контракт layout'а: общая обвязка (шапка, навигация) вокруг страниц одной секции. */
+export interface LayoutModule {
+	render(container: HTMLElement, ctx: RouteContext): LayoutRenderResult;
+}
+
+/** Ленивая загрузка модуля layout'а. Должна быть одной и той же функцией для всех маршрутов одной секции,
+ * чтобы роутер мог по ссылке определить, что layout не изменился, и не пересоздавать его. */
+export type LayoutLoader = () => Promise<{ default: LayoutModule }>;
+
 export interface RouteDefinition {
 	/** Путь маршрута, например "/tasks/:id". Специальное значение "*" — fallback (404). */
 	path: string;
@@ -35,6 +54,8 @@ export interface RouteDefinition {
 	redirectTo?: string;
 	/** Ленивая загрузка модуля страницы (code splitting). */
 	load: () => Promise<{ default: PageModule }>;
+	/** Ленивая загрузка общего layout'а для маршрута (шапка/навигация и т.п.). */
+	layout?: LayoutLoader;
 }
 
 export interface NavigateOptions {

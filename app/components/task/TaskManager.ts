@@ -3,13 +3,15 @@ import "./task.scss";
 import templateHTML from "./task.html?raw";
 import { Task, TaskPriority } from "./Task";
 import { ApiService } from "../../services/ApiService";
+import { bindForm } from "../../forms/bindForm";
 
 export interface TaskManagerRefs extends Record<string, HTMLElement> {
-	newTask: HTMLButtonElement;
-	newTaskInput: HTMLInputElement;
+	form: HTMLFormElement;
 	taskPriority: HTMLSelectElement;
 	tasksList: HTMLUListElement;
 }
+
+type TaskFormField = "title" | "priority";
 
 export interface TaskManagerData {
 	api: ApiService;
@@ -29,9 +31,15 @@ export class TaskManager extends Component<TaskManagerRefs> {
 		this.init();
 	}
 
-	/** Подписывается на кнопку добавления задачи и рендерит начальный список. */
+	/** Подписывается на форму добавления задачи (submit/Enter) и рендерит начальный список. */
 	private init(): void {
-		this.refs.newTask.addEventListener("click", () => this.addTask());
+		bindForm<TaskFormField>(this.refs.form, {
+			schema: { title: { required: "Введите название задачи" }, priority: {} },
+			resetOnSuccess: true,
+			onSubmit: (values) => {
+				this.addTask(values.title, values.priority as TaskPriority);
+			},
+		});
 		this.displayTasks();
 	}
 
@@ -77,21 +85,13 @@ export class TaskManager extends Component<TaskManagerRefs> {
 		});
 	}
 
-	/** Создаёт новую задачу из значений формы и добавляет её в список. */
-	addTask(): void {
-		const title = this.refs.newTaskInput.value.trim();
-		const taskPriority = this.refs.taskPriority.value as TaskPriority;
-		if (!title) {
-			// валидация
-			return;
-		}
-
+	/** Создаёт новую задачу с указанным названием и приоритетом и добавляет её в список. */
+	addTask(title: string, priority: TaskPriority): void {
 		const id = Date.now();
-		const newTask = new Task(id, title, false, taskPriority);
+		const newTask = new Task(id, title, false, priority);
 		this.tasks.push(newTask);
 		this.updateLocalStorage();
 		this.displayTasks();
-		this.refs.newTaskInput.value = "";
 		this.triggerEvent("toast");
 	}
 

@@ -89,43 +89,6 @@ select {
 	}
 }
 
-/* --- Каркас приложения --- */
-
-.site-header {
-	position: sticky;
-	top: 0;
-	z-index: 10;
-	background-color: var(--color-surface);
-	border-bottom: 1px solid var(--color-border);
-}
-
-.site-nav {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.5rem 1rem;
-	max-width: 960px;
-	margin: 0 auto;
-	padding: 1rem 1.5rem;
-
-	a {
-		padding: 0.4em 0.8em;
-		border-radius: 8px;
-		color: var(--color-text-muted);
-		font-weight: 500;
-
-		&:hover {
-			color: var(--color-text);
-			background-color: var(--color-surface-hover);
-		}
-	}
-}
-
-#app {
-	max-width: 960px;
-	margin: 0 auto;
-	padding: 2rem 1.5rem 4rem;
-}
-
 /* --- Состояние навигации --- */
 
 body[data-nav-status="loading"] #app {

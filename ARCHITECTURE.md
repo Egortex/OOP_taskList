@@ -40,14 +40,14 @@ React Router и файловой маршрутизацией Next.js.
 
 ### 2.2. Роутер — `app/router/`
 
-| Файл                | Назначение                                                                                     |
-| ------------------- | ---------------------------------------------------------------------------------------------- |
-| `Router.ts`         | Ядро: перехват кликов/наведений, History API, рендер страниц, кэш, guard'ы, scroll restoration |
-| `types.ts`          | Контракты: `PageModule`, `RouteDefinition`, `RouteContext`, `NavigateOptions`                  |
-| `match.ts`          | Сопоставление шаблона маршрута (`/users/:id`) с реальным path                                  |
-| `cache.ts`          | `PageCache` — TTL-кэш данных, загруженных через `loader`                                       |
-| `session.ts`        | Хранение токена авторизации в `localStorage`                                                   |
-| `renderTemplate.ts` | `mountTemplate()` — вставка HTML-шаблона и сбор `[ref]`-элементов                              |
+| Файл                | Назначение                                                                                                |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `Router.ts`         | Ядро: перехват кликов/наведений, History API, рендер страниц и layout'ов, кэш, guard'ы, scroll restoration |
+| `types.ts`          | Контракты: `PageModule`, `RouteDefinition`, `RouteContext`, `NavigateOptions`, `LayoutModule`               |
+| `match.ts`          | Сопоставление шаблона маршрута (`/users/:id`) с реальным path                                               |
+| `cache.ts`          | `PageCache` — TTL-кэш данных, загруженных через `loader`                                                    |
+| `session.ts`        | Хранение токена авторизации в `localStorage`                                                                |
+| `renderTemplate.ts` | `mountTemplate()` — вставка HTML-шаблона и сбор `[ref]`-элементов                                            |
 
 **Жизненный цикл навигации (`Router.render`)**:
 
@@ -63,11 +63,14 @@ React Router и файловой маршрутизацией Next.js.
    и кладутся в кэш (TTL 30 секунд по умолчанию).
 7. Защита от гонок: если за время загрузки была начата более новая навигация
    (`navId` изменился), результат отбрасывается.
-8. Вызывается `cleanup` предыдущей страницы (если она его вернула), контейнер
-   очищается, вызывается `page.render(container, data, ctx)`.
-9. Восстанавливается прокрутка: при переходе вперёд/назад (`popstate`) —
-   к сохранённой позиции, при обычной навигации — наверх страницы.
-10. Статус навигации меняется на `success` или `error`.
+8. `mountLayout()` гарантирует, что в контейнере смонтирован нужный layout
+   (см. раздел [2.3](#23-layouts--applayouts)), и возвращает его `outlet` —
+   элемент для рендера страницы. Повторная проверка `navId` после `await`.
+9. Вызывается `cleanup` предыдущей страницы (если она его вернула), `outlet`
+   очищается, вызывается `page.render(outlet, data, ctx)`.
+10. Восстанавливается прокрутка: при переходе вперёд/назад (`popstate`) —
+    к сохранённой позиции, при обычной навигации — наверх страницы.
+11. Статус навигации меняется на `success` или `error`.
 
 **Перехват ссылок и prefetch**:
 
@@ -79,7 +82,44 @@ React Router и файловой маршрутизацией Next.js.
   страницы (через её `loader`) заранее кладутся в `PageCache`, чтобы переход
   был мгновенным.
 
-### 2.3. Страницы — `app/pages/`
+### 2.3. Layouts — `app/layouts/`
+
+Layout — общая обвязка вокруг группы страниц (шапка, навигация и т.п.), которая
+не пересоздаётся при переходах внутри своей секции.
+
+`LayoutModule` (см. `router/types.ts`):
+
+- `render(container, ctx): LayoutRenderResult` — монтирует разметку layout'а в
+  контейнер и возвращает:
+  - `outlet` — элемент, в который роутер будет рендерить текущую страницу;
+  - `update?(ctx)` — вызывается при каждой навигации, если layout не
+    пересоздаётся (используется для подсветки активного пункта меню);
+  - `cleanup?()` — вызывается перед размонтированием layout'а при переходе на
+    маршрут с другим layout'ом.
+
+`RouteDefinition.layout?: LayoutLoader` — ленивая загрузка модуля layout'а
+(`() => import(...)`). **Важно**: для всех маршрутов одной секции нужно
+передавать **одну и ту же функцию-ссылку** — роутер сравнивает
+`layoutLoader` предыдущего и нового маршрута по ссылке (`===`), и только если
+она изменилась, пересоздаёт layout. Поэтому в `app/pages/routes.ts` объявлена
+одна константа `mainLayout: LayoutLoader`, переданная во все маршруты.
+
+**`app/layouts/main/`** — единственный на данный момент layout:
+
+- `index.html` / `index.scss` — шапка `.site-header` с навигацией `.site-nav`
+  (перенесены из корневого `index.html`) и контейнер `.app-content` с `ref="outlet"`.
+- `index.layout.ts` — при монтировании и при каждом `update(ctx)` подсвечивает
+  ссылку, соответствующую `ctx.path`, классом `.site-nav__link--active`.
+
+Алгоритм `Router.mountLayout(layoutLoader, ctx)`:
+
+1. Если `layoutLoader === this.currentLayoutLoader` и layout уже смонтирован —
+   просто вызвать `update(ctx)` и вернуть текущий `outlet`.
+2. Иначе — выполнить `cleanup` текущей страницы и layout'а, очистить контейнер,
+   лениво загрузить новый layout (если `layoutLoader` задан) и смонтировать его,
+   вернуть его `outlet` (либо сам контейнер, если у маршрута нет layout'а).
+
+### 2.4. Страницы — `app/pages/`
 
 Файловая маршрутизация: каждая страница — отдельная папка с тремя файлами:
 
@@ -113,7 +153,7 @@ app/pages/<route>/
 | `/profile`   | `profile`    | Защищена `guard`, требует токен, кнопка выхода           |
 | `*`          | `notFound`   | Страница 404                                             |
 
-### 2.4. Компоненты — `app/components/`
+### 2.5. Компоненты — `app/components/`
 
 Базовый класс `Component<TRefs>` (`component.ts`):
 
@@ -140,13 +180,41 @@ app/pages/<route>/
   перерисовывает список.
 - **`Task`** — модель данных задачи (`id`, `title`, `isCompleted`, `priority`).
 
-### 2.5. Сервисы — `app/services/`
+### 2.6. Формы — `app/forms/`
+
+`bindForm<TField>(form, options)` (`bindForm.ts`) — единый слой обработки
+HTML-форм, используется вместо ручных `addEventListener("click"/"submit", ...)`:
+
+- Подписывается на `submit` формы (включая отправку по **Enter**) и вызывает
+  `event.preventDefault()`.
+- Валидирует поля по `schema: Record<TField, FieldRule>`:
+  - `required?: string` — сообщение об ошибке, если поле пустое после `trim()`;
+  - `pattern?: { value: RegExp; message: string }` — проверка регулярным
+    выражением (только для непустых полей).
+- При первой ошибке показывает её в `options.errorElement` (через
+  `textContent` + снятие/установку `hidden`), `onSubmit` не вызывается.
+- При успешной валидации собирает `FormValues<TField>` (имя поля → строка из
+  `FormData`, по атрибуту `name`) и вызывает `onSubmit(values, form)`.
+- `resetOnSuccess?: boolean` — сбрасывает форму после успешного `onSubmit`.
+- Возвращает функцию отписки от `submit` (можно использовать как `cleanup`
+  страницы/компонента).
+
+Используется в:
+
+- **`login`** (`app/pages/login/index.page.ts`) — валидация `username`/`password`,
+  `onSubmit` шлёт `/api/login`, при ошибке показывает сообщение в `refs.error`.
+- **`TaskManager`** (`app/components/task/TaskManager.ts`) — форма добавления
+  задачи (`title`/`priority`); `onSubmit` вызывает `addTask(title, priority)`,
+  `resetOnSuccess: true` очищает поле ввода. Благодаря `<form>` задачу теперь
+  можно добавить нажатием **Enter**.
+
+### 2.7. Сервисы — `app/services/`
 
 - **`ApiService`** — обёртка над `axios` для GET-запросов: автоматически
   отменяет предыдущий незавершённый запрос (`axios.CancelToken`),
   логирует ошибки, предоставляет `getUsers()`.
 
-### 2.6. Стили — `app/assets/style/`
+### 2.8. Стили — `app/assets/style/`
 
 - `tailwind.css` — точка входа Tailwind (`@import "tailwindcss"`).
 - `style.scss` — тёмная тема через CSS custom properties (`--color-*`),

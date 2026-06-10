@@ -63,9 +63,11 @@ docker compose up --build
 
 ```
 app/
-  router/        # ядро SPA-роутера (Router, кэш, матчинг, типы)
+  router/        # ядро SPA-роутера (Router, кэш, матчинг, layout'ы, типы)
+  layouts/       # общие layout'ы (шапка/навигация), переиспользуются между страницами
   pages/         # страницы (file-based маршрутизация), у каждой свой .html/.scss/.page.ts
   components/    # переиспользуемые UI-компоненты (Component, TaskManager, SearchPanel, ...)
+  forms/         # bindForm — единый слой валидации и обработки submit форм
   services/      # ApiService — обёртка над axios
   assets/style/  # глобальные стили (тема, Tailwind)
 server/
@@ -82,6 +84,6 @@ main.ts          # точка входа клиента
 
 ## Дальнейшие задачи (TODO)
 
+- ~~Сделать по нажатию на Enter добавление задачи~~ — готово (форма задач через `bindForm`)
 - Добавить поиск
-- Сделать по нажатию на Enter добавление задачи
 - Добавить фильтрацию

@@ -1,6 +1,13 @@
 import { matchPath } from "./match";
 import { PageCache } from "./cache";
-import type { NavigateOptions, NavigationStatus, RouteContext, RouteDefinition } from "./types";
+import type {
+	LayoutLoader,
+	LayoutRenderResult,
+	NavigateOptions,
+	NavigationStatus,
+	RouteContext,
+	RouteDefinition,
+} from "./types";
 
 interface ResolvedRoute {
 	route: RouteDefinition;
@@ -19,6 +26,8 @@ export class Router {
 	private statusListeners = new Set<StatusListener>();
 	private scrollPositions = new Map<string, number>();
 	private navId = 0;
+	private currentLayoutLoader: LayoutLoader | null = null;
+	private currentLayout: LayoutRenderResult | null = null;
 
 	constructor(
 		private routes: RouteDefinition[],
@@ -178,9 +187,12 @@ export class Router {
 
 			if (navId !== this.navId) return; // перекрыто более новой навигацией
 
+			const pageContainer = await this.mountLayout(matched.layout ?? null, ctx);
+			if (navId !== this.navId) return; // перекрыто более новой навигацией
+
 			this.cleanupCurrentPage?.();
-			this.container.innerHTML = "";
-			const cleanup = page.render(this.container, data, ctx);
+			pageContainer.innerHTML = "";
+			const cleanup = page.render(pageContainer, data, ctx);
 			this.cleanupCurrentPage = typeof cleanup === "function" ? cleanup : null;
 
 			this.restoreScroll(path, options.isPopState ?? false);
@@ -190,6 +202,37 @@ export class Router {
 			console.error("Navigation error:", error);
 			this.setStatus("error");
 		}
+	}
+
+	/**
+	 * Гарантирует, что в контейнере смонтирован нужный layout, и возвращает его outlet —
+	 * элемент, в который должна рендериться текущая страница.
+	 *
+	 * Если у нового маршрута тот же `layoutLoader` (та же функция-ссылка), что и у текущего,
+	 * layout не пересоздаётся — вызывается только его `update()` (например, для подсветки
+	 * активной ссылки в навигации). Если layout сменился или его нет вовсе — текущий layout
+	 * и страница очищаются, контейнер пересоздаётся.
+	 */
+	private async mountLayout(layoutLoader: LayoutLoader | null, ctx: RouteContext): Promise<HTMLElement> {
+		if (layoutLoader === this.currentLayoutLoader && this.currentLayout) {
+			this.currentLayout.update?.(ctx);
+			return this.currentLayout.outlet;
+		}
+
+		this.cleanupCurrentPage?.();
+		this.cleanupCurrentPage = null;
+		this.currentLayout?.cleanup?.();
+		this.currentLayout = null;
+		this.container.innerHTML = "";
+		this.currentLayoutLoader = layoutLoader;
+
+		if (!layoutLoader) {
+			return this.container;
+		}
+
+		const module = await layoutLoader();
+		this.currentLayout = module.default.render(this.container, ctx);
+		return this.currentLayout.outlet;
 	}
 
 	/** Восстанавливает позицию прокрутки при переходе назад/вперёд или прокручивает наверх при обычной навигации. */

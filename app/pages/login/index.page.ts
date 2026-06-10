@@ -1,9 +1,10 @@
 import "./index.scss";
 import templateHTML from "./index.html?raw";
 import { mountTemplate } from "../../router/renderTemplate";
+import { bindForm } from "../../forms/bindForm";
 import { router } from "../../../main";
 import { setAuthToken } from "../../router/session";
-import type { PageModule } from "../../router/types";
+import type { PageModule, RenderResult } from "../../router/types";
 
 interface LoginResponse {
 	token: string;
@@ -14,41 +15,38 @@ interface LoginRefs extends Record<string, HTMLElement> {
 	error: HTMLParagraphElement;
 }
 
+type LoginField = "username" | "password";
+
 const loginPage: PageModule = {
-	render(container): void {
+	render(container): RenderResult {
 		const refs = mountTemplate<LoginRefs>(container, templateHTML);
 
-		refs.form.addEventListener("submit", (event) => {
-			event.preventDefault();
-			void handleSubmit(refs.form, refs.error);
+		return bindForm<LoginField>(refs.form, {
+			schema: {
+				username: { required: "Введите логин" },
+				password: { required: "Введите пароль" },
+			},
+			errorElement: refs.error,
+			onSubmit: async (values) => {
+				const response = await fetch("/api/login", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(values),
+				});
+
+				if (!response.ok) {
+					refs.error.textContent = "Неверный логин или пароль";
+					refs.error.removeAttribute("hidden");
+					return;
+				}
+
+				refs.error.setAttribute("hidden", "");
+				const data = (await response.json()) as LoginResponse;
+				setAuthToken(data.token);
+				router.navigate("/profile");
+			},
 		});
 	},
 };
-
-async function handleSubmit(
-	form: HTMLFormElement,
-	errorMessage: HTMLParagraphElement,
-): Promise<void> {
-	const formData = new FormData(form);
-
-	const response = await fetch("/api/login", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({
-			username: formData.get("username"),
-			password: formData.get("password"),
-		}),
-	});
-
-	if (!response.ok) {
-		errorMessage.removeAttribute("hidden");
-		return;
-	}
-
-	errorMessage.setAttribute("hidden", "");
-	const data = (await response.json()) as LoginResponse;
-	setAuthToken(data.token);
-	router.navigate("/profile");
-}
 
 export default loginPage;
