@@ -16,6 +16,7 @@ export interface TaskManagerData {
 	dataTest?: string;
 }
 
+/** Компонент списка задач: хранение в localStorage, добавление/удаление/переключение статуса, поиск. */
 export class TaskManager extends Component<TaskManagerRefs> {
 	private tasks: Task[];
 	private api: ApiService;
@@ -28,11 +29,13 @@ export class TaskManager extends Component<TaskManagerRefs> {
 		this.init();
 	}
 
+	/** Подписывается на кнопку добавления задачи и рендерит начальный список. */
 	private init(): void {
 		this.refs.newTask.addEventListener("click", () => this.addTask());
 		this.displayTasks();
 	}
 
+	/** Подгружает пользователей с API и добавляет их как задачи (демонстрация работы с ApiService). */
 	async getInform(): Promise<void> {
 		try {
 			this.triggerEvent("onLoader");
@@ -48,11 +51,13 @@ export class TaskManager extends Component<TaskManagerRefs> {
 		}
 	}
 
+	/** Возвращает задачи, заголовок которых содержит искомую подстроку (без учёта регистра). */
 	searchTasks(searchTerm: string): Task[] {
 		const lowerCaseTerm = searchTerm.toLowerCase();
 		return this.tasks.filter((task) => task.title.toLowerCase().includes(lowerCaseTerm));
 	}
 
+	/** Полностью перерисовывает список задач в DOM. */
 	displayTasks(): void {
 		const tasksList = this.refs.tasksList;
 		tasksList.innerHTML = ""; // Очистить текущий список
@@ -72,6 +77,7 @@ export class TaskManager extends Component<TaskManagerRefs> {
 		});
 	}
 
+	/** Создаёт новую задачу из значений формы и добавляет её в список. */
 	addTask(): void {
 		const title = this.refs.newTaskInput.value.trim();
 		const taskPriority = this.refs.taskPriority.value as TaskPriority;
@@ -89,18 +95,22 @@ export class TaskManager extends Component<TaskManagerRefs> {
 		this.triggerEvent("toast");
 	}
 
+	/** Сохраняет текущий список задач в localStorage. */
 	private updateLocalStorage(): void {
 		localStorage.setItem("tasks", JSON.stringify(this.tasks));
 	}
 
+	/** Возвращает текущий список задач. */
 	getTasks(): Task[] {
 		return this.tasks;
 	}
 
+	/** Возвращает корневой элемент списка задач (используется SearchPanel для отрисовки результатов). */
 	getTasksListElement(): HTMLUListElement {
 		return this.refs.tasksList;
 	}
 
+	/** Переключает статус выполнения задачи по id. */
 	toggleCompleted(id: number): void {
 		const task = this.tasks.find((task) => task.id === id);
 		if (task) {
@@ -110,6 +120,7 @@ export class TaskManager extends Component<TaskManagerRefs> {
 		}
 	}
 
+	/** Удаляет задачу по id. */
 	deleteTask(id: number): void {
 		this.tasks = this.tasks.filter((task) => task.id !== id);
 		this.updateLocalStorage();

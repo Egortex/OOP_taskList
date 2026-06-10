@@ -1,96 +1,146 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+	font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+	line-height: 1.5;
+	font-weight: 400;
+	color-scheme: dark;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+	--color-bg: #0f172a;
+	--color-surface: #1e293b;
+	--color-surface-hover: #273449;
+	--color-border: #334155;
+	--color-text: #e2e8f0;
+	--color-text-muted: #94a3b8;
+	--color-accent: #6366f1;
+	--color-accent-hover: #818cf8;
+	--color-danger: #f87171;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+* {
+	box-sizing: border-box;
 }
 
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+	margin: 0;
+	min-height: 100vh;
+	background-color: var(--color-bg);
+	color: var(--color-text);
+}
+
+a {
+	color: var(--color-accent);
+	text-decoration: none;
+	transition: color 0.2s ease;
+
+	&:hover {
+		color: var(--color-accent-hover);
+	}
 }
 
 h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vanilla:hover {
-  filter: drop-shadow(0 0 2em #f7df1eaa);
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+	font-size: 2rem;
+	line-height: 1.2;
+	margin: 0 0 1rem;
 }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+	font-family: inherit;
+	font-size: 1em;
+	font-weight: 500;
+	border-radius: 8px;
+	border: 1px solid transparent;
+	padding: 0.6em 1.2em;
+	background-color: var(--color-accent);
+	color: #fff;
+	cursor: pointer;
+	transition:
+		background-color 0.2s ease,
+		border-color 0.2s ease;
+
+	&:hover {
+		background-color: var(--color-accent-hover);
+	}
+
+	&:focus,
+	&:focus-visible {
+		outline: 2px solid var(--color-accent-hover);
+		outline-offset: 2px;
+	}
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+input,
+select {
+	font-family: inherit;
+	font-size: 1em;
+	border-radius: 8px;
+	border: 1px solid var(--color-border);
+	background-color: var(--color-surface);
+	color: var(--color-text);
+	padding: 0.6em 0.8em;
+
+	&:focus,
+	&:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 1px;
+	}
+}
+
+/* --- Каркас приложения --- */
+
+.site-header {
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	background-color: var(--color-surface);
+	border-bottom: 1px solid var(--color-border);
+}
+
+.site-nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem 1rem;
+	max-width: 960px;
+	margin: 0 auto;
+	padding: 1rem 1.5rem;
+
+	a {
+		padding: 0.4em 0.8em;
+		border-radius: 8px;
+		color: var(--color-text-muted);
+		font-weight: 500;
+
+		&:hover {
+			color: var(--color-text);
+			background-color: var(--color-surface-hover);
+		}
+	}
+}
+
+#app {
+	max-width: 960px;
+	margin: 0 auto;
+	padding: 2rem 1.5rem 4rem;
+}
+
+/* --- Состояние навигации --- */
+
+body[data-nav-status="loading"] #app {
+	opacity: 0.6;
+	pointer-events: none;
+	transition: opacity 0.15s ease;
+}
+
+body[data-nav-status="error"] #app::before {
+	content: "Не удалось загрузить страницу";
+	display: block;
+	margin-bottom: 1rem;
+	padding: 0.75rem 1rem;
+	border-radius: 8px;
+	background-color: rgba(248, 113, 113, 0.15);
+	border: 1px solid var(--color-danger);
+	color: var(--color-danger);
 }

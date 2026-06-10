@@ -1,0 +1,16 @@
+.about-card {
+	padding: 2rem;
+	border-radius: 16px;
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-border);
+
+	&__hint {
+		margin-top: 1rem;
+		padding: 0.6rem 1rem;
+		border-radius: 8px;
+		background-color: rgba(99, 102, 241, 0.12);
+		border: 1px solid var(--color-accent);
+		color: var(--color-accent-hover);
+		font-size: 0.9rem;
+	}
+}

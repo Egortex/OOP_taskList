@@ -1,5 +1,6 @@
 export type TaskPriority = "high" | "medium" | "low";
 
+/** Модель данных одной задачи списка. */
 export class Task {
 	id: number;
 	title: string;

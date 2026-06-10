@@ -1,0 +1,9 @@
+.page--tasks {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding: 1.5rem;
+	border-radius: 16px;
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-border);
+}

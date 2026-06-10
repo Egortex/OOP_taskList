@@ -1,11 +1,13 @@
-<input type="text" ref="newTaskInput" id="taskInput" placeholder="Add a new task" />
-<button ref="newTask">Добавить задачу</button>
-<div class="form-group">
-	<label for="taskPriority">Priority:</label>
-	<select id="taskPriority" ref="taskPriority" name="taskPriority">
-		<option value="high">High</option>
-		<option value="medium" selected>Medium</option>
-		<option value="low">Low</option>
-	</select>
+<div class="task-form">
+	<input type="text" ref="newTaskInput" id="taskInput" placeholder="Add a new task" />
+	<div class="form-group">
+		<label for="taskPriority">Priority:</label>
+		<select id="taskPriority" ref="taskPriority" name="taskPriority">
+			<option value="high">High</option>
+			<option value="medium" selected>Medium</option>
+			<option value="low">Low</option>
+		</select>
+	</div>
+	<button ref="newTask">Добавить задачу</button>
 </div>
 <ul id="tasksList" ref="tasksList"></ul>

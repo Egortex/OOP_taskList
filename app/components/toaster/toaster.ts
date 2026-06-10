@@ -1,6 +1,7 @@
 import "./toaster.html?raw";
 import "./toaster.scss";
 
+/** Глобальный менеджер всплывающих уведомлений (toast), монтируется один раз в main.ts. */
 export class Toaster {
 	private toasterContainer: HTMLDivElement;
 
@@ -8,6 +9,7 @@ export class Toaster {
 		this.toasterContainer = this.createToasterContainer();
 	}
 
+	/** Создаёт и добавляет в body фиксированный контейнер для тостов. */
 	private createToasterContainer(): HTMLDivElement {
 		const container = document.createElement("div");
 		container.setAttribute("id", "toasterContainer");
@@ -19,6 +21,7 @@ export class Toaster {
 		return container;
 	}
 
+	/** Показывает уведомление с заданным текстом, которое плавно исчезает через `duration` мс. */
 	showToast(message: string, duration = 3000): void {
 		const toast = document.createElement("div");
 		toast.textContent = message;

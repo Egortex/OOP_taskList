@@ -1,0 +1,12 @@
+#toasterContainer {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 0.5rem;
+
+	div {
+		font-family: inherit;
+		font-size: 0.9rem;
+		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+	}
+}

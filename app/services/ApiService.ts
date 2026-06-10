@@ -8,6 +8,7 @@ export interface User {
 	email: string;
 }
 
+/** Тонкая обёртка над axios для GET-запросов с автоматической отменой предыдущего запроса. */
 export class ApiService {
 	private url: string;
 	private cancelToken: CancelTokenSource;
@@ -17,6 +18,7 @@ export class ApiService {
 		this.cancelToken = axios.CancelToken.source();
 	}
 
+	/** Выполняет GET-запрос к `${url}${endpoint}`, отменяя предыдущий незавершённый запрос. */
 	async httpGet<T>(endpoint = ""): Promise<T> {
 		try {
 			// Отменяем предыдущий запрос, если он существует
@@ -35,6 +37,7 @@ export class ApiService {
 		}
 	}
 
+	/** Логирует ошибку запроса (отдельно — отмену) и пробрасывает её дальше. */
 	private returnErr(error: unknown): never {
 		if (axios.isCancel(error)) {
 			console.log("Request canceled:", error instanceof Error ? error.message : error);
@@ -45,6 +48,7 @@ export class ApiService {
 		throw error;
 	}
 
+	/** Получает список пользователей с эндпоинта "users". */
 	async getUsers(): Promise<User[]> {
 		return this.httpGet<User[]>("users");
 	}

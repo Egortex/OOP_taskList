@@ -1,0 +1,9 @@
+<section class="page page--login auth-card">
+	<h1 class="text-3xl font-bold tracking-tight">Вход</h1>
+	<form ref="form">
+		<input type="text" name="username" placeholder="Логин (admin)" autocomplete="username" required />
+		<input type="password" name="password" placeholder="Пароль (admin)" autocomplete="current-password" required />
+		<button type="submit">Войти</button>
+	</form>
+	<p ref="error" class="auth-card__error" hidden>Неверный логин или пароль</p>
+</section>

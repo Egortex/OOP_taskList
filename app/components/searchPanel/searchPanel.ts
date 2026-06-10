@@ -28,12 +28,14 @@ export class SearchPanel extends Component<SearchPanelRefs> {
 		this.refs.searchInput.addEventListener("input", this.handleSearchInput.bind(this));
 	}
 
+	/** Обрабатывает ввод в поле поиска: фильтрует задачи и обновляет их отображение. */
 	private handleSearchInput(event: Event): void {
 		const searchTerm = (event.target as HTMLInputElement).value;
 		const filteredTasks = this.taskManager.searchTasks(searchTerm);
 		this.updateTaskDisplay(filteredTasks);
 	}
 
+	/** Перерисовывает список задач в DOM на основе результатов поиска. */
 	private updateTaskDisplay(filteredTasks: Task[]): void {
 		// Логика для обновления отображения задач на основе результатов поиска
 		const tasksContainer = this.taskManager.getTasksListElement();
