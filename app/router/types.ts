@@ -24,6 +24,12 @@ export interface PageModule<TData = unknown> {
 	loader?(ctx: RouteContext): Promise<TData>;
 	/** Проверяет доступ к маршруту; при false должен сам выполнить редирект. */
 	guard?(ctx: RouteContext): Promise<boolean> | boolean;
+	/**
+	 * Рендерит временную skeleton-разметку сразу после монтирования layout'а,
+	 * пока ожидается результат `loader` (только если данных ещё нет в кэше).
+	 * Заменяется реальным содержимым после `render`.
+	 */
+	skeleton?(container: HTMLElement): void;
 	/** Рендерит страницу в контейнер; может вернуть функцию очистки перед уходом со страницы. */
 	render(container: HTMLElement, data: TData, ctx: RouteContext): RenderResult;
 }
@@ -56,6 +62,8 @@ export interface RouteDefinition {
 	load: () => Promise<{ default: PageModule }>;
 	/** Ленивая загрузка общего layout'а для маршрута (шапка/навигация и т.п.). */
 	layout?: LayoutLoader;
+	/** Если true — модуль маршрута предзагружается сразу после старта роутера (для часто посещаемых страниц). */
+	preload?: boolean;
 }
 
 export interface NavigateOptions {

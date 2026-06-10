@@ -5,6 +5,7 @@ import type {
 	LayoutRenderResult,
 	NavigateOptions,
 	NavigationStatus,
+	PageModule,
 	RouteContext,
 	RouteDefinition,
 } from "./types";
@@ -44,6 +45,17 @@ export class Router {
 		document.addEventListener("click", this.onClick);
 		document.addEventListener("mouseover", this.onMouseOver);
 		void this.render();
+		this.preloadCriticalRoutes();
+	}
+
+	/** Сразу после старта подгружает JS-чанки маршрутов с `preload: true` (кроме текущего), не дожидаясь клика. */
+	private preloadCriticalRoutes(): void {
+		for (const route of this.routes) {
+			if (!route.preload || route.path === location.pathname) continue;
+			void route.load().catch(() => {
+				// Предзагрузка best-effort: ошибки молча игнорируются
+			});
+		}
 	}
 
 	/** Подписывается на изменения статуса навигации (loading/success/error). Возвращает функцию отписки. */
@@ -174,16 +186,7 @@ export class Router {
 				if (!allowed) return; // guard сам инициирует редирект (например, на /login)
 			}
 
-			let data: unknown;
-			if (page.loader) {
-				const cached = this.cache.get<unknown>(path);
-				if (cached !== undefined) {
-					data = cached;
-				} else {
-					data = await page.loader(ctx);
-					this.cache.set(path, data);
-				}
-			}
+			const cached = page.loader ? this.cache.get<unknown>(path) : undefined;
 
 			if (navId !== this.navId) return; // перекрыто более новой навигацией
 
@@ -192,15 +195,63 @@ export class Router {
 
 			this.cleanupCurrentPage?.();
 			pageContainer.innerHTML = "";
+
+			let data: unknown;
+			let usedSkeleton = false;
+			if (page.loader) {
+				if (cached !== undefined) {
+					data = cached.data;
+					if (cached.stale) {
+						void this.revalidate(page, ctx, path, navId);
+					}
+				} else {
+					if (page.skeleton) {
+						page.skeleton(pageContainer);
+						document.body.classList.add("has-skeleton");
+						usedSkeleton = true;
+					}
+					data = await page.loader(ctx);
+					if (navId !== this.navId) return; // перекрыто более новой навигацией
+					this.cache.set(path, data);
+				}
+			}
+
+			if (usedSkeleton) {
+				document.body.classList.remove("has-skeleton");
+				pageContainer.innerHTML = "";
+			}
+
 			const cleanup = page.render(pageContainer, data, ctx);
 			this.cleanupCurrentPage = typeof cleanup === "function" ? cleanup : null;
 
 			this.restoreScroll(path, options.isPopState ?? false);
 			this.setStatus("success");
 		} catch (error) {
+			document.body.classList.remove("has-skeleton");
 			if (navId !== this.navId) return;
 			console.error("Navigation error:", error);
 			this.setStatus("error");
+		}
+	}
+
+	/**
+	 * Фоновое обновление устаревших (stale) данных страницы: запрашивает свежие данные через
+	 * `loader`, обновляет кэш и, если пользователь всё ещё на этой странице, перерисовывает её.
+	 */
+	private async revalidate(page: PageModule, ctx: RouteContext, path: string, navId: number): Promise<void> {
+		if (!page.loader) return;
+		try {
+			const fresh = await page.loader(ctx);
+			this.cache.set(path, fresh);
+			if (navId !== this.navId) return; // ушли с этой страницы — перерисовывать не нужно
+
+			const container = this.currentLayout?.outlet ?? this.container;
+			this.cleanupCurrentPage?.();
+			container.innerHTML = "";
+			const cleanup = page.render(container, fresh, ctx);
+			this.cleanupCurrentPage = typeof cleanup === "function" ? cleanup : null;
+		} catch {
+			// Фоновое обновление best-effort: оставляем устаревшие данные при ошибке
 		}
 	}
 

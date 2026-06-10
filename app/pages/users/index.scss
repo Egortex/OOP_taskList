@@ -6,6 +6,11 @@
 	margin: 0;
 	padding: 0;
 
+	&__skeleton-card {
+		height: 3.25rem;
+		border-radius: 12px;
+	}
+
 	&__item {
 		a {
 			display: block;

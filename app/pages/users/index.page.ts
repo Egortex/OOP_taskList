@@ -10,9 +10,23 @@ interface UsersRefs extends Record<string, HTMLElement> {
 	list: HTMLUListElement;
 }
 
+const SKELETON_ITEMS_COUNT = 6;
+
 const usersPage: PageModule<User[]> = {
 	async loader(): Promise<User[]> {
 		return api.getUsers();
+	},
+
+	skeleton(container): void {
+		const refs = mountTemplate<UsersRefs>(container, templateHTML);
+		for (let i = 0; i < SKELETON_ITEMS_COUNT; i++) {
+			const item = document.createElement("li");
+			item.className = "users-grid__item";
+			const placeholder = document.createElement("div");
+			placeholder.className = "skeleton users-grid__skeleton-card";
+			item.appendChild(placeholder);
+			refs.list.appendChild(item);
+		}
 	},
 
 	render(container, data): void {

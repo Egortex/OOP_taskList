@@ -18,6 +18,16 @@ const userPage: PageModule<User> = {
 		return api.httpGet<User>(`users/${ctx.params.id}`);
 	},
 
+	skeleton(container): void {
+		const refs = mountTemplate<UserRefs>(container, templateHTML);
+		refs.heading.textContent = "Загрузка...";
+		refs.heading.classList.add("skeleton", "user-detail__skeleton-heading");
+		refs.name.textContent = "Загрузка...";
+		refs.name.classList.add("skeleton", "user-detail__skeleton-text");
+		refs.email.textContent = "Загрузка...";
+		refs.email.classList.add("skeleton", "user-detail__skeleton-text");
+	},
+
 	render(container, data, ctx): void {
 		const refs = mountTemplate<UserRefs>(container, templateHTML);
 		refs.heading.textContent = `Пользователь #${ctx.params.id}`;

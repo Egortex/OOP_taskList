@@ -91,10 +91,30 @@ select {
 
 /* --- Состояние навигации --- */
 
-body[data-nav-status="loading"] #app {
+body[data-nav-status="loading"]:not(.has-skeleton) #app {
 	opacity: 0.6;
 	pointer-events: none;
 	transition: opacity 0.15s ease;
+}
+
+/* --- Skeleton-заглушки на время загрузки данных страницы --- */
+
+.skeleton {
+	display: block;
+	border-radius: 8px;
+	background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-surface-hover) 50%, var(--color-surface) 75%);
+	background-size: 200% 100%;
+	animation: skeleton-shimmer 1.4s ease-in-out infinite;
+	color: transparent;
+}
+
+@keyframes skeleton-shimmer {
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
 }
 
 body[data-nav-status="error"] #app::before {
