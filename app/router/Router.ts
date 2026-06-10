@@ -15,6 +15,11 @@ interface ResolvedRoute {
 	params: Record<string, string>;
 }
 
+interface MountedLayout {
+	loader: LayoutLoader;
+	result: LayoutRenderResult;
+}
+
 export type StatusListener = (status: NavigationStatus) => void;
 
 /**
@@ -27,8 +32,8 @@ export class Router {
 	private statusListeners = new Set<StatusListener>();
 	private scrollPositions = new Map<string, number>();
 	private navId = 0;
-	private currentLayoutLoader: LayoutLoader | null = null;
-	private currentLayout: LayoutRenderResult | null = null;
+	private layoutChain: MountedLayout[] = [];
+	private abortController: AbortController | null = null;
 
 	constructor(
 		private routes: RouteDefinition[],
@@ -127,7 +132,7 @@ export class Router {
 			const loader = module.default.loader;
 			if (!loader) return;
 
-			const ctx = this.buildContext(path, resolved.params);
+			const ctx = this.buildContext(path, resolved.params, new AbortController().signal);
 			const data = await loader(ctx);
 			this.cache.set(path, data);
 		} catch {
@@ -145,10 +150,16 @@ export class Router {
 		return null;
 	}
 
-	/** Формирует контекст маршрута (путь, параметры, query-строка) для loader/guard/render. */
-	private buildContext(path: string, params: Record<string, string>): RouteContext {
+	/** Формирует контекст маршрута (путь, параметры, query-строка, сигнал отмены) для loader/guard/render. */
+	private buildContext(path: string, params: Record<string, string>, signal: AbortSignal): RouteContext {
 		const [pathname, search = ""] = path.split("?");
-		return { path: pathname, params, query: new URLSearchParams(search) };
+		return { path: pathname, params, query: new URLSearchParams(search), signal };
+	}
+
+	/** Приводит `RouteDefinition.layout` (одиночный layout, цепочка или его отсутствие) к массиву. */
+	private toLayoutChain(layout: LayoutLoader | LayoutLoader[] | undefined): LayoutLoader[] {
+		if (!layout) return [];
+		return Array.isArray(layout) ? layout : [layout];
 	}
 
 	/** Оповещает всех подписчиков о смене статуса навигации. */
@@ -162,6 +173,10 @@ export class Router {
 	 */
 	private async render(options: { isPopState?: boolean } = {}): Promise<void> {
 		const navId = ++this.navId;
+		this.abortController?.abort();
+		const abortController = new AbortController();
+		this.abortController = abortController;
+
 		const path = location.pathname + location.search;
 		const resolved = this.resolve(location.pathname);
 		const fallback = this.routes.find((route) => route.path === "*");
@@ -177,8 +192,25 @@ export class Router {
 				return;
 			}
 
-			const ctx = this.buildContext(path, resolved?.params ?? {});
-			const module = await matched.load();
+			const ctx = this.buildContext(path, resolved?.params ?? {}, abortController.signal);
+
+			// Модуль страницы и модули новых (изменившихся) layout'ов цепочки грузятся параллельно
+			const layoutChain = this.toLayoutChain(matched.layout);
+			let common = 0;
+			while (
+				common < this.layoutChain.length &&
+				common < layoutChain.length &&
+				this.layoutChain[common].loader === layoutChain[common]
+			) {
+				common++;
+			}
+			const pageModulePromise = matched.load();
+			const layoutModulePromises = new Map<LayoutLoader, ReturnType<LayoutLoader>>();
+			for (let i = common; i < layoutChain.length; i++) {
+				layoutModulePromises.set(layoutChain[i], layoutChain[i]());
+			}
+
+			const module = await pageModulePromise;
 			const page = module.default;
 
 			if (page.guard) {
@@ -190,7 +222,7 @@ export class Router {
 
 			if (navId !== this.navId) return; // перекрыто более новой навигацией
 
-			const pageContainer = await this.mountLayout(matched.layout ?? null, ctx);
+			const pageContainer = await this.mountLayout(layoutChain, common, ctx, layoutModulePromises);
 			if (navId !== this.navId) return; // перекрыто более новой навигацией
 
 			this.cleanupCurrentPage?.();
@@ -245,7 +277,7 @@ export class Router {
 			this.cache.set(path, fresh);
 			if (navId !== this.navId) return; // ушли с этой страницы — перерисовывать не нужно
 
-			const container = this.currentLayout?.outlet ?? this.container;
+			const container = this.layoutChain[this.layoutChain.length - 1]?.result.outlet ?? this.container;
 			this.cleanupCurrentPage?.();
 			container.innerHTML = "";
 			const cleanup = page.render(container, fresh, ctx);
@@ -256,34 +288,49 @@ export class Router {
 	}
 
 	/**
-	 * Гарантирует, что в контейнере смонтирован нужный layout, и возвращает его outlet —
-	 * элемент, в который должна рендериться текущая страница.
+	 * Гарантирует, что в контейнере смонтирована нужная цепочка layout'ов, и возвращает
+	 * `outlet` последнего из них — элемент, в который должна рендериться текущая страница.
 	 *
-	 * Если у нового маршрута тот же `layoutLoader` (та же функция-ссылка), что и у текущего,
-	 * layout не пересоздаётся — вызывается только его `update()` (например, для подсветки
-	 * активной ссылки в навигации). Если layout сменился или его нет вовсе — текущий layout
-	 * и страница очищаются, контейнер пересоздаётся.
+	 * `common` — длина общего префикса текущей и новой цепочки (по ссылкам функций
+	 * `LayoutLoader`). Layout'ы из общего префикса не пересоздаются — вызывается только
+	 * их `update()` (например, для подсветки активной ссылки). Layout'ы за пределами
+	 * префикса размонтируются (`cleanup()`), а новые монтируются по очереди, каждый —
+	 * в `outlet` предыдущего.
 	 */
-	private async mountLayout(layoutLoader: LayoutLoader | null, ctx: RouteContext): Promise<HTMLElement> {
-		if (layoutLoader === this.currentLayoutLoader && this.currentLayout) {
-			this.currentLayout.update?.(ctx);
-			return this.currentLayout.outlet;
+	private async mountLayout(
+		layoutChain: LayoutLoader[],
+		common: number,
+		ctx: RouteContext,
+		layoutModulePromises: Map<LayoutLoader, ReturnType<LayoutLoader>>,
+	): Promise<HTMLElement> {
+		// Размонтируем "хвост" цепочки, который не совпал с предыдущей навигацией
+		if (common < this.layoutChain.length) {
+			this.cleanupCurrentPage?.();
+			this.cleanupCurrentPage = null;
+			for (let i = this.layoutChain.length - 1; i >= common; i--) {
+				this.layoutChain[i].result.cleanup?.();
+			}
+			this.layoutChain.length = common;
+			if (common === 0) this.container.innerHTML = "";
 		}
 
-		this.cleanupCurrentPage?.();
-		this.cleanupCurrentPage = null;
-		this.currentLayout?.cleanup?.();
-		this.currentLayout = null;
-		this.container.innerHTML = "";
-		this.currentLayoutLoader = layoutLoader;
-
-		if (!layoutLoader) {
-			return this.container;
+		// Переиспользуемые layout'ы получают update() (например, подсветка активной ссылки)
+		for (let i = 0; i < common; i++) {
+			this.layoutChain[i].result.update?.(ctx);
 		}
 
-		const module = await layoutLoader();
-		this.currentLayout = module.default.render(this.container, ctx);
-		return this.currentLayout.outlet;
+		let outlet = common > 0 ? this.layoutChain[common - 1].result.outlet : this.container;
+
+		for (let i = common; i < layoutChain.length; i++) {
+			outlet.innerHTML = "";
+			const loader = layoutChain[i];
+			const module = await layoutModulePromises.get(loader)!;
+			const result = module.default.render(outlet, ctx);
+			this.layoutChain.push({ loader, result });
+			outlet = result.outlet;
+		}
+
+		return outlet;
 	}
 
 	/** Восстанавливает позицию прокрутки при переходе назад/вперёд или прокручивает наверх при обычной навигации. */

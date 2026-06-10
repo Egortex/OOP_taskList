@@ -18,8 +18,12 @@ export class ApiService {
 		this.cancelToken = axios.CancelToken.source();
 	}
 
-	/** Выполняет GET-запрос к `${url}${endpoint}`, отменяя предыдущий незавершённый запрос. */
-	async httpGet<T>(endpoint = ""): Promise<T> {
+	/**
+	 * Выполняет GET-запрос к `${url}${endpoint}`, отменяя предыдущий незавершённый запрос.
+	 * Дополнительно можно передать `signal` (например, `ctx.signal` из роутера) — запрос
+	 * будет отменён, если навигация перекрыта более новой до получения ответа.
+	 */
+	async httpGet<T>(endpoint = "", signal?: AbortSignal): Promise<T> {
 		try {
 			// Отменяем предыдущий запрос, если он существует
 			this.cancelToken.cancel("Cancelled Ongoing Request");
@@ -28,6 +32,7 @@ export class ApiService {
 			// Выполняем GET запрос
 			const response = await axios.get<T>(`${this.url}${endpoint}`, {
 				cancelToken: this.cancelToken.token,
+				signal,
 			});
 			// Возвращаем данные ответа
 			return response.data;
@@ -49,7 +54,7 @@ export class ApiService {
 	}
 
 	/** Получает список пользователей с эндпоинта "users". */
-	async getUsers(): Promise<User[]> {
-		return this.httpGet<User[]>("users");
+	async getUsers(signal?: AbortSignal): Promise<User[]> {
+		return this.httpGet<User[]>("users", signal);
 	}
 }

@@ -86,5 +86,7 @@ main.ts          # точка входа клиента
 
 - ~~Сделать по нажатию на Enter добавление задачи~~ — готово (форма задач через `bindForm`)
 - ~~Preload критичных маршрутов, skeleton-состояния, stale-while-revalidate~~ — готово (см. [ARCHITECTURE.md](./ARCHITECTURE.md#22-роутер--approuter))
+- ~~Параллельная загрузка layout/page-модулей и отмена устаревших запросов через AbortSignal~~ — готово (см. [ARCHITECTURE.md](./ARCHITECTURE.md#22-роутер--approuter))
+- ~~Вложенные маршруты / master-detail для `/users` → `/users/:id`~~ — готово (см. [ARCHITECTURE.md](./ARCHITECTURE.md#23-layouts--applayouts))
 - Добавить поиск
 - Добавить фильтрацию

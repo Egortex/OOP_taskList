@@ -15,7 +15,7 @@ interface UserRefs extends Record<string, HTMLElement> {
 const userPage: PageModule<User> = {
 	async loader(ctx): Promise<User> {
 		// Пример работы с параметрами маршрута: /users/:id
-		return api.httpGet<User>(`users/${ctx.params.id}`);
+		return api.httpGet<User>(`users/${ctx.params.id}`, ctx.signal);
 	},
 
 	skeleton(container): void {

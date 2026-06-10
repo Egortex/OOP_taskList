@@ -6,6 +6,8 @@ export interface RouteContext {
 	path: string;
 	params: RouteParams;
 	query: URLSearchParams;
+	/** Сигнал отмены: срабатывает, если навигация была перекрыта более новой до завершения loader'а. */
+	signal: AbortSignal;
 }
 
 export type NavigationStatus = "idle" | "loading" | "success" | "error";
@@ -60,8 +62,13 @@ export interface RouteDefinition {
 	redirectTo?: string;
 	/** Ленивая загрузка модуля страницы (code splitting). */
 	load: () => Promise<{ default: PageModule }>;
-	/** Ленивая загрузка общего layout'а для маршрута (шапка/навигация и т.п.). */
-	layout?: LayoutLoader;
+	/**
+	 * Ленивая загрузка layout'а (или цепочки вложенных layout'ов) для маршрута.
+	 * Каждый следующий layout монтируется в `outlet` предыдущего (master-detail,
+	 * вложенные секции и т.п.). Роутер сравнивает цепочки по ссылкам функций
+	 * и пересоздаёт только изменившийся "хвост".
+	 */
+	layout?: LayoutLoader | LayoutLoader[];
 	/** Если true — модуль маршрута предзагружается сразу после старта роутера (для часто посещаемых страниц). */
 	preload?: boolean;
 }

@@ -15,8 +15,8 @@ interface AboutRefs extends Record<string, HTMLElement> {
 }
 
 const aboutPage: PageModule<AboutData> = {
-	async loader(): Promise<AboutData> {
-		const response = await fetch("/api/pages/about");
+	async loader(ctx): Promise<AboutData> {
+		const response = await fetch("/api/pages/about", { signal: ctx.signal });
 		if (!response.ok) throw new Error("Failed to load about page data");
 		return (await response.json()) as AboutData;
 	},

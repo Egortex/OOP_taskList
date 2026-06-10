@@ -26,9 +26,10 @@ const profilePage: PageModule<ProfileData> = {
 		return true;
 	},
 
-	async loader(): Promise<ProfileData> {
+	async loader(ctx): Promise<ProfileData> {
 		const response = await fetch("/api/me", {
 			headers: { Authorization: `Bearer ${getAuthToken() ?? ""}` },
+			signal: ctx.signal,
 		});
 		if (!response.ok) throw new Error("Failed to load profile");
 		return (await response.json()) as ProfileData;

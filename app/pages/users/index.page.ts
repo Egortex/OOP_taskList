@@ -1,46 +1,15 @@
 import "./index.scss";
 import templateHTML from "./index.html?raw";
 import { mountTemplate } from "../../router/renderTemplate";
-import { ApiService, type User } from "../../services/ApiService";
 import type { PageModule } from "../../router/types";
 
-const api = new ApiService("https://jsonplaceholder.typicode.com/");
-
-interface UsersRefs extends Record<string, HTMLElement> {
-	list: HTMLUListElement;
-}
-
-const SKELETON_ITEMS_COUNT = 6;
-
-const usersPage: PageModule<User[]> = {
-	async loader(): Promise<User[]> {
-		return api.getUsers();
-	},
-
-	skeleton(container): void {
-		const refs = mountTemplate<UsersRefs>(container, templateHTML);
-		for (let i = 0; i < SKELETON_ITEMS_COUNT; i++) {
-			const item = document.createElement("li");
-			item.className = "users-grid__item";
-			const placeholder = document.createElement("div");
-			placeholder.className = "skeleton users-grid__skeleton-card";
-			item.appendChild(placeholder);
-			refs.list.appendChild(item);
-		}
-	},
-
-	render(container, data): void {
-		const refs = mountTemplate<UsersRefs>(container, templateHTML);
-
-		data.forEach((user) => {
-			const item = document.createElement("li");
-			item.className = "users-grid__item";
-			const link = document.createElement("a");
-			link.href = `/users/${user.id}`;
-			link.textContent = user.name;
-			item.appendChild(link);
-			refs.list.appendChild(item);
-		});
+/**
+ * Содержимое outlet'а секции /users по умолчанию: список пользователей рендерит
+ * `usersLayout` (сайдбар), здесь — лишь подсказка выбрать пользователя.
+ */
+const usersPage: PageModule = {
+	render(container): void {
+		mountTemplate(container, templateHTML);
 	},
 };
 

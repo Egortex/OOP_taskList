@@ -14,8 +14,8 @@ interface HomeRefs extends Record<string, HTMLElement> {
 }
 
 const homePage: PageModule<HomeData> = {
-	async loader(): Promise<HomeData> {
-		const response = await fetch("/api/pages/home");
+	async loader(ctx): Promise<HomeData> {
+		const response = await fetch("/api/pages/home", { signal: ctx.signal });
 		if (!response.ok) throw new Error("Failed to load home page data");
 		return (await response.json()) as HomeData;
 	},
