@@ -4,14 +4,12 @@ import { mountTemplate } from "../../router/renderTemplate";
 import { preloader, toaster } from "../../../main";
 import { SearchPanel } from "../../components/searchPanel/searchPanel";
 import { TaskManager } from "../../components/task/TaskManager";
-import { ApiService } from "../../services/ApiService";
+import { jsonPlaceholderApi as api } from "../../services/container";
 import type { PageModule } from "../../router/types";
 
 const tasksPage: PageModule = {
 	render(container): () => void {
 		mountTemplate(container, templateHTML);
-
-		const api = new ApiService("https://jsonplaceholder.typicode.com/");
 
 		const taskManager = new TaskManager("task", {
 			data: { api, dataTest: "тестирование" },

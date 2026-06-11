@@ -1,10 +1,9 @@
 import "./index.scss";
 import templateHTML from "./index.html?raw";
 import { mountTemplate } from "../../../router/renderTemplate";
-import { ApiService, type User } from "../../../services/ApiService";
+import type { User } from "../../../services/ApiService";
+import { jsonPlaceholderApi as api } from "../../../services/container";
 import type { PageModule } from "../../../router/types";
-
-const api = new ApiService("https://jsonplaceholder.typicode.com/");
 
 interface UserRefs extends Record<string, HTMLElement> {
 	heading: HTMLHeadingElement;
