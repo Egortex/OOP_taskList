@@ -42,12 +42,21 @@ React Router и файловой маршрутизацией Next.js.
 
 | Файл                | Назначение                                                                                                |
 | ------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `Router.ts`         | Ядро: перехват кликов/наведений, History API, рендер страниц и layout'ов, кэш, guard'ы, scroll restoration |
+| `Router.ts`         | Ядро: перехват кликов, History API, основной цикл `render()`, кэш, guard'ы — связывает остальные модули    |
 | `types.ts`          | Контракты: `PageModule`, `RouteDefinition`, `RouteContext`, `NavigateOptions`, `LayoutModule`               |
 | `match.ts`          | Сопоставление шаблона маршрута (`/users/:id`) с реальным path                                               |
-| `cache.ts`          | `PageCache` — TTL-кэш данных, загруженных через `loader`                                                    |
+| `cache.ts`          | `PageCache` — TTL-кэш данных, загруженных через `loader` (stale-while-revalidate)                          |
+| `layoutChain.ts`    | `LayoutChainManager` — диффинг и монтирование цепочки layout'ов (`mount`, `commonPrefixLength`)             |
+| `transitions.ts`    | `runTransition()` — обёртка над View Transitions API с фолбэком                                            |
+| `prefetch.ts`       | `HoverPrefetcher` (debounce-prefetch по наведению) и `preloadCriticalRoutes()`                              |
+| `scroll.ts`         | `ScrollManager` — сохранение/восстановление позиции прокрутки между навигациями                             |
 | `session.ts`        | Хранение токена авторизации в `localStorage`                                                                |
 | `renderTemplate.ts` | `mountTemplate()` — вставка HTML-шаблона и сбор `[ref]`-элементов                                            |
+
+`Router` хранит экземпляры `PageCache`, `LayoutChainManager`, `ScrollManager`,
+`HoverPrefetcher` как поля и делегирует им соответствующую логику; каждый из
+этих модулей не зависит от `Router` и может использоваться/тестироваться
+изолированно.
 
 **Жизненный цикл навигации (`Router.render`)**:
 
@@ -70,7 +79,7 @@ React Router и файловой маршрутизацией Next.js.
    рендерится skeleton-разметка (см. [Skeleton-состояния](#skeleton-состояния-страниц)).
 7. Защита от гонок: если за время загрузки была начата более новая навигация
    (`navId` изменился), результат отбрасывается.
-8. `mountLayout()` гарантирует, что в контейнере смонтирован нужный layout
+8. `LayoutChainManager.mount()` гарантирует, что в контейнере смонтирован нужный layout
    (см. раздел [2.3](#23-layouts--applayouts)), и возвращает его `outlet` —
    элемент для рендера страницы. Повторная проверка `navId` после `await`.
 9. Вызывается `cleanup` предыдущей страницы (если она его вернула), `outlet`
@@ -85,16 +94,16 @@ React Router и файловой маршрутизацией Next.js.
   (`onClick`) и превращается в `navigate()` без перезагрузки. Внешние ссылки,
   ссылки с `target`, `download`, модификаторами клавиш и `data-no-router` —
   не трогаются.
-- При наведении на ссылку (`onMouseOver`) запускается **отложенный** (через
+- При наведении на ссылку `HoverPrefetcher` запускает **отложенный** (через
   `PREFETCH_HOVER_DELAY_MS = 120`мс) `prefetch()` — данные страницы (через её
   `loader`) заранее кладутся в `PageCache`, чтобы переход был мгновенным.
-  Если курсор уходит со ссылки раньше (`onMouseOut`) — таймер отменяется, и
+  Если курсор уходит со ссылки раньше (`mouseout`) — таймер отменяется, и
   prefetch не выполняется. Это отсеивает "пролётные" наведения, например при
   быстром скролле мышью по списку `/users`.
 
 **View Transitions**:
 
-- `Router.runTransition(update)` оборачивает мгновенную часть рендера —
+- `runTransition(update)` (из `transitions.ts`) оборачивает мгновенную часть рендера —
   очистку предыдущей страницы и показ кэшированных данных / skeleton / страниц
   без `loader` — в `document.startViewTransition(update)`, если браузер его
   поддерживает и пользователь не включил `prefers-reduced-motion: reduce`.
@@ -213,7 +222,7 @@ Layout — общая обвязка вокруг группы страниц (�
   пользователя"; `/users/[id]/index.page.ts` — карточку с данными пользователя
   (`loader` + `skeleton`, как и раньше).
 
-Алгоритм `Router.mountLayout(layoutChain, common, ctx, modulePromises)`:
+Алгоритм `LayoutChainManager.mount(layoutChain, common, ctx, modulePromises, container, onUnmountTail)`:
 
 1. `common` — длина общего префикса текущей и новой цепочки layout'ов
    (вычисляется в `render()` по ссылкам `LayoutLoader` **до** загрузки модулей,

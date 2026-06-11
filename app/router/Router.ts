@@ -1,8 +1,11 @@
 import { matchPath } from "./match";
 import { PageCache } from "./cache";
+import { runTransition } from "./transitions";
+import { ScrollManager } from "./scroll";
+import { LayoutChainManager, toLayoutChain } from "./layoutChain";
+import { HoverPrefetcher, preloadCriticalRoutes } from "./prefetch";
 import type {
 	LayoutLoader,
-	LayoutRenderResult,
 	NavigateOptions,
 	NavigationStatus,
 	PageModule,
@@ -15,15 +18,7 @@ interface ResolvedRoute {
 	params: Record<string, string>;
 }
 
-interface MountedLayout {
-	loader: LayoutLoader;
-	result: LayoutRenderResult;
-}
-
 export type StatusListener = (status: NavigationStatus) => void;
-
-/** Задержка перед prefetch по наведению — отменяется, если курсор уходит со ссылки раньше. */
-const PREFETCH_HOVER_DELAY_MS = 120;
 
 /**
  * Клиентский SPA-роутер: перехват ссылок, History API, матчинг маршрутов,
@@ -33,11 +28,11 @@ export class Router {
 	private cache = new PageCache();
 	private cleanupCurrentPage: (() => void) | null = null;
 	private statusListeners = new Set<StatusListener>();
-	private scrollPositions = new Map<string, number>();
+	private scroll = new ScrollManager();
 	private navId = 0;
-	private layoutChain: MountedLayout[] = [];
+	private layoutChain = new LayoutChainManager();
 	private abortController: AbortController | null = null;
-	private prefetchTimer: ReturnType<typeof setTimeout> | null = null;
+	private prefetcher = new HoverPrefetcher((path) => void this.prefetch(path));
 
 	constructor(
 		private routes: RouteDefinition[],
@@ -46,26 +41,15 @@ export class Router {
 		history.scrollRestoration = "manual";
 	}
 
-	/** Запускает роутер: подписывается на popstate/click/mouseover и рендерит текущий маршрут. */
+	/** Запускает роутер: подписывается на popstate/click/hover-prefetch и рендерит текущий маршрут. */
 	start(): void {
 		window.addEventListener("popstate", () => {
 			void this.render({ isPopState: true });
 		});
 		document.addEventListener("click", this.onClick);
-		document.addEventListener("mouseover", this.onMouseOver);
-		document.addEventListener("mouseout", this.onMouseOut);
+		this.prefetcher.attach();
 		void this.render();
-		this.preloadCriticalRoutes();
-	}
-
-	/** Сразу после старта подгружает JS-чанки маршрутов с `preload: true` (кроме текущего), не дожидаясь клика. */
-	private preloadCriticalRoutes(): void {
-		for (const route of this.routes) {
-			if (!route.preload || route.path === location.pathname) continue;
-			void route.load().catch(() => {
-				// Предзагрузка best-effort: ошибки молча игнорируются
-			});
-		}
+		preloadCriticalRoutes(this.routes);
 	}
 
 	/** Подписывается на изменения статуса навигации (loading/success/error). Возвращает функцию отписки. */
@@ -79,7 +63,7 @@ export class Router {
 		const current = location.pathname + location.search;
 		if (path === current && !options.replace) return;
 
-		this.scrollPositions.set(current, window.scrollY);
+		this.scroll.save(current);
 
 		if (options.replace) {
 			history.replaceState(options.state ?? {}, "", path);
@@ -109,36 +93,6 @@ export class Router {
 
 		event.preventDefault();
 		this.navigate(url.pathname + url.search);
-	};
-
-	/**
-	 * При наведении на внутреннюю ссылку откладывает prefetch на `PREFETCH_HOVER_DELAY_MS` —
-	 * это отсеивает "пролётные" наведения (например, при быстром скролле мышью по списку ссылок).
-	 */
-	private onMouseOver = (event: MouseEvent): void => {
-		const target = event.target;
-		if (!(target instanceof Element)) return;
-
-		const link = target.closest("a");
-		if (!link) return;
-
-		const url = new URL(link.href, location.href);
-		if (url.origin !== location.origin) return;
-
-		if (this.prefetchTimer) clearTimeout(this.prefetchTimer);
-		const path = url.pathname + url.search;
-		this.prefetchTimer = setTimeout(() => {
-			this.prefetchTimer = null;
-			void this.prefetch(path);
-		}, PREFETCH_HOVER_DELAY_MS);
-	};
-
-	/** Отменяет отложенный prefetch, если курсор ушёл со ссылки до истечения задержки. */
-	private onMouseOut = (): void => {
-		if (this.prefetchTimer) {
-			clearTimeout(this.prefetchTimer);
-			this.prefetchTimer = null;
-		}
 	};
 
 	/** Предзагрузка данных страницы по наведению на ссылку (Next.js-style). */
@@ -177,26 +131,6 @@ export class Router {
 		return { path: pathname, params, query: new URLSearchParams(search), signal };
 	}
 
-	/** Приводит `RouteDefinition.layout` (одиночный layout, цепочка или его отсутствие) к массиву. */
-	private toLayoutChain(layout: LayoutLoader | LayoutLoader[] | undefined): LayoutLoader[] {
-		if (!layout) return [];
-		return Array.isArray(layout) ? layout : [layout];
-	}
-
-	/**
-	 * Выполняет обновление DOM через View Transitions API (`document.startViewTransition`),
-	 * если браузер её поддерживает и пользователь не запросил отключение анимаций
-	 * (`prefers-reduced-motion: reduce`). Иначе — просто выполняет `update()` напрямую.
-	 */
-	private runTransition(update: () => void): void {
-		const doc = document as Document & { startViewTransition?: (callback: () => void) => unknown };
-		if (!doc.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-			update();
-			return;
-		}
-		doc.startViewTransition(update);
-	}
-
 	/** Оповещает всех подписчиков о смене статуса навигации. */
 	private setStatus(status: NavigationStatus): void {
 		this.statusListeners.forEach((listener) => listener(status));
@@ -230,15 +164,8 @@ export class Router {
 			const ctx = this.buildContext(path, resolved?.params ?? {}, abortController.signal);
 
 			// Модуль страницы и модули новых (изменившихся) layout'ов цепочки грузятся параллельно
-			const layoutChain = this.toLayoutChain(matched.layout);
-			let common = 0;
-			while (
-				common < this.layoutChain.length &&
-				common < layoutChain.length &&
-				this.layoutChain[common].loader === layoutChain[common]
-			) {
-				common++;
-			}
+			const layoutChain = toLayoutChain(matched.layout);
+			const common = this.layoutChain.commonPrefixLength(layoutChain);
 			const pageModulePromise = matched.load();
 			const layoutModulePromises = new Map<LayoutLoader, ReturnType<LayoutLoader>>();
 			for (let i = common; i < layoutChain.length; i++) {
@@ -257,7 +184,17 @@ export class Router {
 
 			if (navId !== this.navId) return; // перекрыто более новой навигацией
 
-			const pageContainer = await this.mountLayout(layoutChain, common, ctx, layoutModulePromises);
+			const pageContainer = await this.layoutChain.mount(
+				layoutChain,
+				common,
+				ctx,
+				layoutModulePromises,
+				this.container,
+				() => {
+					this.cleanupCurrentPage?.();
+					this.cleanupCurrentPage = null;
+				},
+			);
 			if (navId !== this.navId) return; // перекрыто более новой навигацией
 
 			let data: unknown;
@@ -266,7 +203,7 @@ export class Router {
 			// Мгновенная часть: очистка предыдущей страницы и либо рендер из кэша,
 			// либо skeleton, либо рендер страниц без loader'а — оборачивается в View
 			// Transition для плавной смены содержимого между страницами.
-			this.runTransition(() => {
+			runTransition(() => {
 				this.cleanupCurrentPage?.();
 				pageContainer.innerHTML = "";
 
@@ -304,7 +241,7 @@ export class Router {
 				}
 			}
 
-			this.restoreScroll(path, options.isPopState ?? false);
+			this.scroll.restore(path, options.isPopState ?? false);
 			this.setStatus("success");
 		} catch (error) {
 			document.body.classList.remove("has-skeleton");
@@ -325,68 +262,13 @@ export class Router {
 			this.cache.set(path, fresh);
 			if (navId !== this.navId) return; // ушли с этой страницы — перерисовывать не нужно
 
-			const container = this.layoutChain[this.layoutChain.length - 1]?.result.outlet ?? this.container;
+			const container = this.layoutChain.lastOutlet(this.container);
 			this.cleanupCurrentPage?.();
 			container.innerHTML = "";
 			const cleanup = page.render(container, fresh, ctx);
 			this.cleanupCurrentPage = typeof cleanup === "function" ? cleanup : null;
 		} catch {
 			// Фоновое обновление best-effort: оставляем устаревшие данные при ошибке
-		}
-	}
-
-	/**
-	 * Гарантирует, что в контейнере смонтирована нужная цепочка layout'ов, и возвращает
-	 * `outlet` последнего из них — элемент, в который должна рендериться текущая страница.
-	 *
-	 * `common` — длина общего префикса текущей и новой цепочки (по ссылкам функций
-	 * `LayoutLoader`). Layout'ы из общего префикса не пересоздаются — вызывается только
-	 * их `update()` (например, для подсветки активной ссылки). Layout'ы за пределами
-	 * префикса размонтируются (`cleanup()`), а новые монтируются по очереди, каждый —
-	 * в `outlet` предыдущего.
-	 */
-	private async mountLayout(
-		layoutChain: LayoutLoader[],
-		common: number,
-		ctx: RouteContext,
-		layoutModulePromises: Map<LayoutLoader, ReturnType<LayoutLoader>>,
-	): Promise<HTMLElement> {
-		// Размонтируем "хвост" цепочки, который не совпал с предыдущей навигацией
-		if (common < this.layoutChain.length) {
-			this.cleanupCurrentPage?.();
-			this.cleanupCurrentPage = null;
-			for (let i = this.layoutChain.length - 1; i >= common; i--) {
-				this.layoutChain[i].result.cleanup?.();
-			}
-			this.layoutChain.length = common;
-			if (common === 0) this.container.innerHTML = "";
-		}
-
-		// Переиспользуемые layout'ы получают update() (например, подсветка активной ссылки)
-		for (let i = 0; i < common; i++) {
-			this.layoutChain[i].result.update?.(ctx);
-		}
-
-		let outlet = common > 0 ? this.layoutChain[common - 1].result.outlet : this.container;
-
-		for (let i = common; i < layoutChain.length; i++) {
-			outlet.innerHTML = "";
-			const loader = layoutChain[i];
-			const module = await layoutModulePromises.get(loader)!;
-			const result = module.default.render(outlet, ctx);
-			this.layoutChain.push({ loader, result });
-			outlet = result.outlet;
-		}
-
-		return outlet;
-	}
-
-	/** Восстанавливает позицию прокрутки при переходе назад/вперёд или прокручивает наверх при обычной навигации. */
-	private restoreScroll(path: string, isPopState: boolean): void {
-		if (isPopState) {
-			window.scrollTo(0, this.scrollPositions.get(path) ?? 0);
-		} else {
-			window.scrollTo(0, 0);
 		}
 	}
 }
