@@ -1,7 +1,7 @@
 import "./index.scss";
 import templateHTML from "./index.html?raw";
-import { mountTemplate } from "../../router/renderTemplate";
-import type { LayoutModule, LayoutRenderResult } from "../../router/types";
+import { mountTemplate } from "dom-template";
+import type { LayoutModule, LayoutRenderResult } from "spa-router";
 
 interface MainLayoutRefs extends Record<string, HTMLElement> {
 	nav: HTMLElement;

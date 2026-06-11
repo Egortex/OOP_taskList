@@ -1,9 +1,9 @@
 import "./index.scss";
 import templateHTML from "./index.html?raw";
-import { mountTemplate } from "../../router/renderTemplate";
+import { mountTemplate } from "dom-template";
 import { router } from "../../../main";
 import { clearAuthToken, getAuthToken } from "../../router/session";
-import type { PageModule } from "../../router/types";
+import type { PageModule } from "spa-router";
 
 interface ProfileData {
 	user: {

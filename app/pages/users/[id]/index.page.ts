@@ -1,9 +1,9 @@
 import "./index.scss";
 import templateHTML from "./index.html?raw";
-import { mountTemplate } from "../../../router/renderTemplate";
+import { mountTemplate } from "dom-template";
 import type { User } from "../../../services/ApiService";
 import { jsonPlaceholderApi as api } from "../../../services/container";
-import type { PageModule } from "../../../router/types";
+import type { PageModule } from "spa-router";
 
 interface UserRefs extends Record<string, HTMLElement> {
 	heading: HTMLHeadingElement;

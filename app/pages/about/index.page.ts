@@ -1,7 +1,7 @@
 import "./index.scss";
 import templateHTML from "./index.html?raw";
-import { mountTemplate } from "../../router/renderTemplate";
-import type { PageModule } from "../../router/types";
+import { mountTemplate } from "dom-template";
+import type { PageModule } from "spa-router";
 
 interface AboutData {
 	title: string;

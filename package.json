@@ -24,7 +24,10 @@
   },
   "dependencies": {
     "axios": "^1.6.8",
+    "bind-form": "file:../spa-toolkit/packages/bind-form",
+    "dom-template": "file:../spa-toolkit/packages/dom-template",
     "express": "^5.2.1",
+    "spa-router": "file:../spa-toolkit/packages/spa-router",
     "tsx": "^4.22.4"
   }
 }

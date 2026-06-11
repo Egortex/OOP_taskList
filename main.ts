@@ -2,7 +2,7 @@ import "./app/assets/style/tailwind.css";
 import "./app/assets/style/style.scss";
 import { Preloader } from "./app/components/preloader/preloader";
 import { Toaster } from "./app/components/toaster/toaster";
-import { Router } from "./app/router/Router";
+import { Router } from "spa-router";
 import { routes } from "./app/pages/routes";
 
 const appElem = document.getElementById("app");
