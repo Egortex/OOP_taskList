@@ -1,0 +1,54 @@
+<section class="page page--form-demo form-demo-card">
+	<h1 class="text-3xl font-bold tracking-tight">Регистрация (демо bind-form)</h1>
+	<p class="form-demo-card__intro">
+		Форма демонстрирует все возможности <code>@chepchik/bind-form</code>: правила схемы,
+		валидацию по blur, асинхронный <code>resolver</code>, отслеживание состояния
+		(<code>onStateChange</code> / <code>getState</code>), <code>watch</code> и блокировку
+		кнопки на время отправки.
+	</p>
+
+	<form ref="form" class="form-demo">
+		<label class="form-demo__field">
+			<span>Имя пользователя</span>
+			<input type="text" name="username" placeholder="ivan_petrov" autocomplete="username" />
+			<span class="form-demo__error" data-error-for="username" hidden></span>
+		</label>
+
+		<label class="form-demo__field">
+			<span>Email</span>
+			<input type="email" name="email" placeholder="ivan@example.com" autocomplete="email" />
+			<span class="form-demo__error" data-error-for="email" hidden></span>
+		</label>
+
+		<label class="form-demo__field">
+			<span>Возраст</span>
+			<input type="number" name="age" placeholder="25" min="18" max="99" />
+			<span class="form-demo__error" data-error-for="age" hidden></span>
+		</label>
+
+		<label class="form-demo__field">
+			<span>Пароль <span ref="passwordStrength" class="form-demo__hint"></span></span>
+			<input type="password" name="password" placeholder="Минимум 6 символов, с цифрой" autocomplete="new-password" />
+			<span class="form-demo__error" data-error-for="password" hidden></span>
+		</label>
+
+		<label class="form-demo__field">
+			<span>О себе <span ref="bioCount" class="form-demo__hint">0/200</span></span>
+			<textarea name="bio" rows="3" placeholder="Пара слов о себе"></textarea>
+			<span class="form-demo__error" data-error-for="bio" hidden></span>
+		</label>
+
+		<div class="form-demo__actions">
+			<button type="button" ref="fillButton" class="form-demo__secondary">Заполнить пример</button>
+			<button type="button" ref="resetButton" class="form-demo__secondary">Сбросить</button>
+			<button type="submit" ref="submitButton">Зарегистрироваться</button>
+		</div>
+
+		<p ref="error" class="form-demo__error form-demo__error--general" hidden></p>
+	</form>
+
+	<details class="form-demo__state">
+		<summary>Состояние формы (onStateChange / getState)</summary>
+		<pre ref="state"></pre>
+	</details>
+</section>

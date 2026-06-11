@@ -1,0 +1,95 @@
+.form-demo-card {
+	max-width: 480px;
+	margin: 2rem auto;
+	padding: 2rem;
+	border-radius: 16px;
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-border);
+
+	&__intro {
+		margin-top: 0.5rem;
+		color: var(--color-text-muted);
+		font-size: 0.9rem;
+
+		code {
+			color: var(--color-accent-hover);
+		}
+	}
+
+	&__state {
+		margin-top: 1.5rem;
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+
+		pre {
+			margin-top: 0.5rem;
+			padding: 0.75rem 1rem;
+			border-radius: 8px;
+			background-color: rgba(255, 255, 255, 0.03);
+			border: 1px solid var(--color-border);
+			overflow-x: auto;
+			white-space: pre-wrap;
+		}
+	}
+}
+
+.form-demo {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	margin-top: 1rem;
+
+	&__field {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		font-size: 0.9rem;
+
+		input,
+		textarea {
+			width: 100%;
+		}
+	}
+
+	&__hint {
+		float: right;
+		color: var(--color-text-muted);
+		font-size: 0.8rem;
+		font-weight: normal;
+	}
+
+	&__error {
+		color: var(--color-danger);
+		font-size: 0.8rem;
+
+		&--general {
+			margin-top: 0.5rem;
+			padding: 0.6rem 1rem;
+			border-radius: 8px;
+			background-color: rgba(248, 113, 113, 0.12);
+			border: 1px solid var(--color-danger);
+		}
+	}
+
+	&__actions {
+		display: flex;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+	}
+
+	&__secondary {
+		background-color: transparent;
+		border: 1px solid var(--color-border);
+		color: var(--color-text-muted);
+
+		&:hover {
+			border-color: var(--color-accent);
+			color: var(--color-accent-hover);
+		}
+	}
+
+	button[type="submit"]:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+}

@@ -24,9 +24,13 @@ const loginPage: PageModule = {
 		return bindForm<LoginField>(refs.form, {
 			schema: {
 				username: { required: "Введите логин" },
-				password: { required: "Введите пароль" },
+				password: {
+					required: "Введите пароль",
+					minLength: { value: 4, message: "Минимум 4 символа" },
+				},
 			},
 			errorElement: refs.error,
+			validateOn: "blur",
 			onSubmit: async (values) => {
 				const response = await fetch("/api/login", {
 					method: "POST",

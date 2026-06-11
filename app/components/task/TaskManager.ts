@@ -34,7 +34,14 @@ export class TaskManager extends Component<TaskManagerRefs> {
 	/** Подписывается на форму добавления задачи (submit/Enter) и рендерит начальный список. */
 	private init(): void {
 		bindForm<TaskFormField>(this.refs.form, {
-			schema: { title: { required: "Введите название задачи" }, priority: {} },
+			schema: {
+				title: {
+					required: "Введите название задачи",
+					minLength: { value: 2, message: "Минимум 2 символа" },
+				},
+				priority: {},
+			},
+			validateOn: "input",
 			resetOnSuccess: true,
 			onSubmit: (values) => {
 				this.addTask(values.title, values.priority as TaskPriority);

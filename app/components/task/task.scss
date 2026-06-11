@@ -9,6 +9,12 @@
 		flex: 1;
 		min-width: 12rem;
 	}
+
+	&__error {
+		flex: 0 0 100%;
+		color: var(--color-danger);
+		font-size: 0.8rem;
+	}
 }
 
 .form-group {

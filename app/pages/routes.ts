@@ -23,6 +23,7 @@ export const routes: RouteDefinition[] = [
 	{ path: "/", load: () => import("./home/index.page"), layout: mainLayout, preload: true },
 	{ path: "/tasks", load: () => import("./tasks/index.page"), layout: mainLayout, preload: true },
 	{ path: "/about", load: () => import("./about/index.page"), layout: mainLayout },
+	{ path: "/form-demo", load: () => import("./form-demo/index.page"), layout: mainLayout },
 	{ path: "/users", load: () => import("./users/index.page"), layout: [mainLayout, usersLayout] },
 	{ path: "/users/:id", load: () => import("./users/[id]/index.page"), layout: [mainLayout, usersLayout] },
 	{ path: "/login", load: () => import("./login/index.page"), layout: mainLayout },

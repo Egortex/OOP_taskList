@@ -22,4 +22,10 @@
 		color: var(--color-danger);
 		font-size: 0.9rem;
 	}
+
+	&__field-error {
+		margin-top: -0.5rem;
+		color: var(--color-danger);
+		font-size: 0.8rem;
+	}
 }
