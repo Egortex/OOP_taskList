@@ -1,33 +1,33 @@
 {
-  "name": "kurs_test",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "concurrently -k -n client,server \"npm:dev:client\" \"npm:dev:server\"",
-    "dev:client": "vite",
-    "dev:server": "tsx watch server/index.ts",
-    "build": "vite build",
-    "preview": "vite preview",
-    "start": "tsx server/index.ts",
-    "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.3.0",
-    "@types/express": "^5.0.6",
-    "@types/node": "^25.9.2",
-    "concurrently": "^10.0.3",
-    "sass": "^1.74.1",
-    "tailwindcss": "^4.3.0",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.16"
-  },
-  "dependencies": {
-    "axios": "^1.6.8",
-    "bind-form": "file:../spa-toolkit/packages/bind-form",
-    "dom-template": "file:../spa-toolkit/packages/dom-template",
-    "express": "^5.2.1",
-    "spa-router": "file:../spa-toolkit/packages/spa-router",
-    "tsx": "^4.22.4"
-  }
+	"name": "kurs_test",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "concurrently -k -n client,server \"npm:dev:client\" \"npm:dev:server\"",
+		"dev:client": "vite",
+		"dev:server": "tsx watch server/index.ts",
+		"build": "vite build",
+		"preview": "vite preview",
+		"start": "tsx server/index.ts",
+		"typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit"
+	},
+	"devDependencies": {
+		"@tailwindcss/vite": "^4.3.0",
+		"@types/express": "^5.0.6",
+		"@types/node": "^25.9.2",
+		"concurrently": "^10.0.3",
+		"sass": "^1.74.1",
+		"tailwindcss": "^4.3.0",
+		"typescript": "^6.0.3",
+		"vite": "^8.0.16"
+	},
+	"dependencies": {
+		"@chepchik/bind-form": "^0.1.0",
+		"@chepchik/dom-template": "^0.1.0",
+		"@chepchik/spa-router": "^0.1.0",
+		"axios": "^1.17.0",
+		"express": "^5.2.1",
+		"tsx": "^4.22.4"
+	}
 }

@@ -1,9 +1,9 @@
 import "./index.scss";
 import templateHTML from "./index.html?raw";
-import { mountTemplate } from "dom-template";
+import { mountTemplate } from "@chepchik/dom-template";
 import type { User } from "../../services/ApiService";
 import { jsonPlaceholderApi as api } from "../../services/container";
-import type { LayoutModule, LayoutRenderResult, RouteContext } from "spa-router";
+import type { LayoutModule, LayoutRenderResult, RouteContext } from "@chepchik/spa-router";
 
 interface UsersLayoutRefs extends Record<string, HTMLElement> {
 	list: HTMLUListElement;

@@ -1,4 +1,4 @@
-import type { LayoutLoader, RouteDefinition } from "spa-router";
+import type { LayoutLoader, RouteDefinition } from "@chepchik/spa-router";
 
 /**
  * Общий layout приложения (шапка с навигацией). Объявлен как одна функция-ссылка

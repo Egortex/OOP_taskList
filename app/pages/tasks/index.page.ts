@@ -1,11 +1,11 @@
 import "./index.scss";
 import templateHTML from "./index.html?raw";
-import { mountTemplate } from "dom-template";
+import { mountTemplate } from "@chepchik/dom-template";
 import { preloader, toaster } from "../../../main";
 import { SearchPanel } from "../../components/searchPanel/searchPanel";
 import { TaskManager } from "../../components/task/TaskManager";
 import { jsonPlaceholderApi as api } from "../../services/container";
-import type { PageModule } from "spa-router";
+import type { PageModule } from "@chepchik/spa-router";
 
 const tasksPage: PageModule = {
 	render(container): () => void {

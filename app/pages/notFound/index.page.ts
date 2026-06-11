@@ -1,7 +1,7 @@
 import "./index.scss";
 import templateHTML from "./index.html?raw";
-import { mountTemplate } from "dom-template";
-import type { PageModule } from "spa-router";
+import { mountTemplate } from "@chepchik/dom-template";
+import type { PageModule } from "@chepchik/spa-router";
 
 interface NotFoundRefs extends Record<string, HTMLElement> {
 	message: HTMLParagraphElement;

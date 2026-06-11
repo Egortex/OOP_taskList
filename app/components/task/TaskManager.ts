@@ -3,7 +3,7 @@ import "./task.scss";
 import templateHTML from "./task.html?raw";
 import { Task, TaskPriority } from "./Task";
 import { ApiService } from "../../services/ApiService";
-import { bindForm } from "bind-form";
+import { bindForm } from "@chepchik/bind-form";
 
 export interface TaskManagerRefs extends Record<string, HTMLElement> {
 	form: HTMLFormElement;

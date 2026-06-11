@@ -1,10 +1,10 @@
 import "./index.scss";
 import templateHTML from "./index.html?raw";
-import { mountTemplate } from "dom-template";
-import { bindForm } from "bind-form";
+import { mountTemplate } from "@chepchik/dom-template";
+import { bindForm } from "@chepchik/bind-form";
 import { router } from "../../../main";
 import { setAuthToken } from "../../router/session";
-import type { PageModule, RenderResult } from "spa-router";
+import type { PageModule, RenderResult } from "@chepchik/spa-router";
 
 interface LoginResponse {
 	token: string;
