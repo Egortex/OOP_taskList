@@ -18,7 +18,7 @@ const userPage: PageModule<User> = {
 	},
 
 	skeleton(container): void {
-		const refs = mountTemplate<UserRefs>(container, templateHTML);
+		const { refs } = mountTemplate<UserRefs>(container, templateHTML);
 		refs.heading.textContent = "Загрузка...";
 		refs.heading.classList.add("skeleton", "user-detail__skeleton-heading");
 		refs.name.textContent = "Загрузка...";
@@ -28,7 +28,7 @@ const userPage: PageModule<User> = {
 	},
 
 	render(container, data, ctx): void {
-		const refs = mountTemplate<UserRefs>(container, templateHTML);
+		const { refs } = mountTemplate<UserRefs>(container, templateHTML);
 		refs.heading.textContent = `Пользователь #${ctx.params.id}`;
 		refs.name.textContent = data.name;
 		refs.email.textContent = data.email;

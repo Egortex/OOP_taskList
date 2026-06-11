@@ -22,7 +22,7 @@ const aboutPage: PageModule<AboutData> = {
 	},
 
 	render(container, data, ctx): void {
-		const refs = mountTemplate<AboutRefs>(container, templateHTML);
+		const { refs } = mountTemplate<AboutRefs>(container, templateHTML);
 		refs.title.textContent = data.title;
 		refs.content.textContent = data.content;
 

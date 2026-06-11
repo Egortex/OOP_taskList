@@ -9,7 +9,7 @@ interface NotFoundRefs extends Record<string, HTMLElement> {
 
 const notFoundPage: PageModule = {
 	render(container, _data, ctx): void {
-		const refs = mountTemplate<NotFoundRefs>(container, templateHTML);
+		const { refs } = mountTemplate<NotFoundRefs>(container, templateHTML);
 		refs.message.textContent = `Страница «${ctx.path}» не найдена.`;
 	},
 };

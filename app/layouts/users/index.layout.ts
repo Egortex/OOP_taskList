@@ -50,7 +50,7 @@ async function renderList(refs: UsersLayoutRefs, ctx: RouteContext, signal: Abor
  */
 const usersLayout: LayoutModule = {
 	render(container, ctx): LayoutRenderResult {
-		const refs = mountTemplate<UsersLayoutRefs>(container, templateHTML);
+		const { refs } = mountTemplate<UsersLayoutRefs>(container, templateHTML);
 		const controller = new AbortController();
 
 		if (!cachedUsers) {

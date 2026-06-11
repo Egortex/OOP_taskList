@@ -36,7 +36,7 @@ const profilePage: PageModule<ProfileData> = {
 	},
 
 	render(container, data): void {
-		const refs = mountTemplate<ProfileRefs>(container, templateHTML);
+		const { refs } = mountTemplate<ProfileRefs>(container, templateHTML);
 		refs.greeting.textContent = `Добро пожаловать, ${data.user.name}!`;
 
 		refs.logoutBtn.addEventListener("click", () => {

@@ -19,7 +19,7 @@ type LoginField = "username" | "password";
 
 const loginPage: PageModule = {
 	render(container): RenderResult {
-		const refs = mountTemplate<LoginRefs>(container, templateHTML);
+		const { refs } = mountTemplate<LoginRefs>(container, templateHTML);
 
 		return bindForm<LoginField>(refs.form, {
 			schema: {

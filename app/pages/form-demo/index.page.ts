@@ -41,7 +41,7 @@ function getPasswordStrength(value: string): string {
 
 const formDemoPage: PageModule = {
 	render(container): RenderResult {
-		const refs = mountTemplate<FormDemoRefs>(container, templateHTML);
+		const { refs } = mountTemplate<FormDemoRefs>(container, templateHTML);
 
 		const updateBioCount = (value: string): void => {
 			refs.bioCount.textContent = `${value.length}/${BIO_MAX_LENGTH}`;

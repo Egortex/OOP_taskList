@@ -1,3 +1,5 @@
+import { mountTemplate } from "@chepchik/dom-template";
+
 export type ComponentEventHandler = (event: Event) => void;
 
 export interface ComponentEvents {
@@ -33,17 +35,8 @@ export class Component<TRefs extends Record<string, HTMLElement> = Record<string
 		this.componentElem = componentElem;
 
 		if (template) {
-			const templateFragment = document.createRange().createContextualFragment(template);
-			this.componentElem.appendChild(templateFragment);
-
-			this.refs = Array.from(this.componentElem.querySelectorAll<HTMLElement>("[ref]")).reduce(
-				(acc, elem) => {
-					const refName = elem.getAttribute("ref");
-					if (refName) acc[refName] = elem;
-					return acc;
-				},
-				{} as Record<string, HTMLElement>,
-			) as TRefs;
+			const { refs } = mountTemplate<Record<string, HTMLElement>>(this.componentElem, template);
+			this.refs = refs as TRefs;
 		}
 
 		Object.entries(events).forEach(([eventName, handler]) =>

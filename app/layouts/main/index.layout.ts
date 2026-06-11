@@ -18,7 +18,7 @@ function updateActiveLink(nav: HTMLElement, path: string): void {
 /** Основной layout приложения: шапка с навигацией + outlet для текущей страницы. */
 const mainLayout: LayoutModule = {
 	render(container, ctx): LayoutRenderResult {
-		const refs = mountTemplate<MainLayoutRefs>(container, templateHTML);
+		const { refs } = mountTemplate<MainLayoutRefs>(container, templateHTML);
 		updateActiveLink(refs.nav, ctx.path);
 
 		return {

@@ -21,7 +21,7 @@ const homePage: PageModule<HomeData> = {
 	},
 
 	render(container, data): void {
-		const refs = mountTemplate<HomeRefs>(container, templateHTML);
+		const { refs } = mountTemplate<HomeRefs>(container, templateHTML);
 		refs.title.textContent = data.title;
 		refs.content.textContent = data.content;
 	},

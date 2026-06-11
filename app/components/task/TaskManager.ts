@@ -4,6 +4,17 @@ import templateHTML from "./task.html?raw";
 import { Task, TaskPriority } from "./Task";
 import { ApiService } from "../../services/ApiService";
 import { bindForm } from "@chepchik/bind-form";
+import { mountTemplate } from "@chepchik/dom-template";
+
+interface TaskItemRefs extends Record<string, HTMLElement[]> {
+	item: HTMLLIElement[];
+	delete: HTMLButtonElement[];
+}
+
+/** Экранирует HTML-спецсимволы перед вставкой пользовательского текста в шаблон. */
+function escapeHtml(value: string): string {
+	return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
+}
 
 export interface TaskManagerRefs extends Record<string, HTMLElement> {
 	form: HTMLFormElement;
@@ -74,21 +85,29 @@ export class TaskManager extends Component<TaskManagerRefs> {
 
 	/** Полностью перерисовывает список задач в DOM. */
 	displayTasks(): void {
-		const tasksList = this.refs.tasksList;
-		tasksList.innerHTML = ""; // Очистить текущий список
-		this.tasks.forEach((task) => {
-			const taskElement = document.createElement("li");
-			taskElement.textContent = `${task.isCompleted} ${task.title} ${task.priority}`;
-			taskElement.onclick = () => this.toggleCompleted(task.id);
-			tasksList.appendChild(taskElement);
+		const itemsHTML = this.tasks
+			.map(
+				(task) => `
+					<li ref="item[]">
+						${task.isCompleted ? "✅" : "⬜"} ${escapeHtml(task.title)} ${task.priority}
+						<button ref="delete[]" type="button">Delete</button>
+					</li>
+				`,
+			)
+			.join("");
 
-			const deleteButton = document.createElement("button");
-			deleteButton.textContent = "Delete";
-			deleteButton.onclick = (e) => {
-				e.stopPropagation(); // Предотвращаем срабатывание onclick родителя
+		const { refs } = mountTemplate<TaskItemRefs>(this.refs.tasksList, itemsHTML, { position: "replace" });
+
+		this.tasks.forEach((task, index) => {
+			const item = refs.item?.[index];
+			const deleteButton = refs.delete?.[index];
+			if (!item || !deleteButton) return;
+
+			item.addEventListener("click", () => this.toggleCompleted(task.id));
+			deleteButton.addEventListener("click", (e: Event) => {
+				e.stopPropagation(); // Предотвращаем срабатывание click родителя
 				this.deleteTask(task.id);
-			};
-			taskElement.appendChild(deleteButton);
+			});
 		});
 	}
 
