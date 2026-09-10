@@ -1,5 +1,7 @@
 # OOP Task List
 
+# Версия устарела, текущие обновления перенесены в [spa-toolkit](https://github.com/Egortex/spa-toolkit)
+
 SPA-приложение со списком задач на Vanilla TypeScript: собственный клиентский роутер
 (в духе React Router/Next.js), Express-сервер для API и статики, Tailwind CSS + SCSS
 для стилей.
